@@ -1,0 +1,13 @@
+{
+  "name": "mongopool",
+  "purpose": "library",
+  "doc_dir": "docs/",
+  "rst_dir": "rst/",
+  "doc_src_dir": "",
+  "nimble_file": "mongopool.nimble",
+  "files_to_ignore": [
+    "src/mongopool/reply.nim",
+    "src/mongopool/proto.nim",
+    "src/mongopool/writeconcern.nim"
+  ]
+}
