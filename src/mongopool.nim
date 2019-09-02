@@ -7,16 +7,14 @@
 #
 ###########################################
 
-## MONGOPOOL
-## 
 ## A simple pure-nim mongodb pooled client designed for use with threaded
-## applications such as "Jester".
+## applications such as `Jester <https://github.com/dom96/jester>`__.
 ## 
 ## HOW TO USE (UNTHREADED)
-## -----------------------
+## =======================
 ## 
-## 1. Import the library (duh.) But, you will also *really* want the 'bson'
-##    library as well since you will be sending the documents as BSON.
+## 1. Import the library. But, you will also *really* want the `bson <https://github.com/JohnAD/bson>`__
+##    library as well since you will be using BSON documents.
 ##
 ## .. code:: nim
 ##
@@ -35,11 +33,11 @@
 ##
 ##     var db = getNextConnection()
 ##
-## 4. Use it to do things! See the section called "BASIC CRUD" for quick examples.
+## 4. Use it to do things! See the section called `BASIC CRUD <#basic-crud>`__ for quick examples.
 ##
 ## .. code:: nim
 ##
-##     var doc = db.find("mycollection", %*{"name": "jerry"}).returnOne()
+##     var doc = db.find("mycollection", @@{"name": "jerry"}).returnOne()
 ##
 ## 5. Release the connection when done.
 ##
@@ -48,11 +46,11 @@
 ##     releaseConnection(db)
 ##
 ## HOW TO USE (THREADED)
-## ---------------------
+## =====================
 ##
 ## The whole point of this library is threaded application use. The biggest
-## change is that the connection is pulled using 'getNextConnectionAsThread'
-## instead of 'getNextConnection'. Of course, that will only work from inside
+## change is that the connection is pulled using ``getNextConnectionAsThread``
+## instead of ``getNextConnection``. Of course, that will only work from inside
 ## the thread. Here is an example that uses Jester to make a web site:
 ##
 ## .. code:: nim
@@ -81,14 +79,16 @@
 ##         resp "doc = " & $doc
 ##
 ## BASIC CRUD
-## ----------
+## ==========
 ##
-## Some quick examples of how to Create, Read, Update, and Delete. See the
-## appendix reference for more details.
+## Some quick examples of how to Create, Read, Update, and Delete and their
+## related functions. See the appendix references for more details.
 ##
 ## CREATE
 ## ======
 ## 
+## Example:
+##
 ## .. code:: nim
 ##
 ##     import mongopool
@@ -96,7 +96,7 @@
 ##     connectMongoPool("mongodb://someone:secret@mongo.domain.com:27017/abc")
 ##     var db = getNextConnection()
 ##
-##     let joe = %*{
+##     let joe = @@{
 ##       "name": "Joe",
 ##       "age": 42
 ##     }
@@ -105,8 +105,12 @@
 ##
 ##     releaseConnection(db)
 ##
+## related functions: 
+## `insertMany<https://github.com/JohnAD/mongopool/blob/master/docs/mongopool-ref.rst#insertMany.p>`__, 
+## `insertOne<https://github.com/JohnAD/mongopool/blob/master/docs/mongopool-ref.rst#insertOne.p>`__
+##
 ## READ (FIND)
-## ===========
+## -----------
 ## 
 ## .. code:: nim
 ##
@@ -115,15 +119,26 @@
 ##     connectMongoPool("mongodb://someone:secret@mongo.domain.com:27017/abc")
 ##     var db = getNextConnection()
 ##
-##     var docs = db.find("people", %*{"age": {"$gt": 21}}).sort(%*{"name": 1}).limit(10).returnMany()
+##     var docs = db.find("people", @@{"age": {"$gt": 21}}).sort(@@{"name": 1}).limit(10).returnMany()
 ##
 ##     for doc in docs:
 ##       echo "name: $1, age $2".format(doc["name"], doc["age"])
 ##
 ##     releaseConnection(db)
 ##
+## related functions:
+## * to start the query: `find<https://github.com/JohnAD/mongopool/blob/master/docs/mongopool-ref.rst#find.p>`__
+## * to modify the query: 
+##   `limit<https://github.com/JohnAD/mongopool/blob/master/docs/mongopool-ref.rst#limit.p>`__,
+##   `skip<https://github.com/JohnAD/mongopool/blob/master/docs/mongopool-ref.rst#skip.p>`__,
+##   `sort<https://github.com/JohnAD/mongopool/blob/master/docs/mongopool-ref.rst#sort.p>`__
+## * to get results from the query: 
+##   `returnCount<https://github.com/JohnAD/mongopool/blob/master/docs/mongopool-ref.rst#returnCount.p>`__, 
+##   `returnMany<https://github.com/JohnAD/mongopool/blob/master/docs/mongopool-ref.rst#returnMany.p>`__, 
+##   `returnOne<https://github.com/JohnAD/mongopool/blob/master/docs/mongopool-ref.rst#returnOne.p>`__
+##
 ## UPDATE
-## ======
+## ------
 ## 
 ## .. code:: nim
 ##
@@ -132,16 +147,20 @@
 ##     connectMongoPool("mongodb://someone:secret@mongo.domain.com:27017/abc")
 ##     var db = getNextConnection()
 ##
-##     var joe = db.find("people", %*{"name": "Joe"}).returnOne()
+##     var joe = db.find("people", @@{"name": "Joe"}).returnOne()
 ##     joe["age"] = 43
-##     let ctr = db.replaceOne(%*{"_id": joe["_id"]}, joe)
+##     let ctr = db.replaceOne(@@{"_id": joe["_id"]}, joe)
 ##     if ctr == 1:
 ##       echo "change made!"
 ##
 ##     releaseConnection(db)
 ##
+## related functions: 
+## `replaceOne<https://github.com/JohnAD/mongopool/blob/master/docs/mongopool-ref.rst#replaceOne.p>`__, 
+## `deleteOne<https://github.com/JohnAD/mongopool/blob/master/docs/mongopool-ref.rst#deleteOne.p>`__
+##
 ## DELETE
-## ======
+## ------
 ## 
 ## .. code:: nim
 ##
@@ -150,11 +169,14 @@
 ##     connectMongoPool("mongodb://someone:secret@mongo.domain.com:27017/abc")
 ##     var db = getNextConnection()
 ##
-##     var ctr = db.deleteMany("people", %*{"name": "Larry"})
+##     var ctr = db.deleteMany("people", @@{"name": "Larry"})
 ##     echo "$1 people named Larry removed.".format(ctr)
 ##
 ##     releaseConnection(db)
 ##
+## related functions: 
+## `deleteMany<https://github.com/JohnAD/mongopool/blob/master/docs/mongopool-ref.rst#deleteMany.p>`__, 
+## `deleteOne<https://github.com/JohnAD/mongopool/blob/master/docs/mongopool-ref.rst#deleteOne.p>`__
 
 
 # Required for using _Lock on linux
@@ -216,7 +238,7 @@ type
     minConnections: int
     maxConnections: int
     writeConcern: WriteConcern
-  MongoCursor = object     ## MongoDB cursor: manages queries object lazily
+  FindQuery = object     ## MongoDB cursor: manages queries object lazily
     connection: MongoConnection
     requestId: int32
     databaseName: string
@@ -246,10 +268,11 @@ proc nextRequestId(mc: var MongoConnection): int32 =
     mc.requestId = (mc.requestId + 1) mod (int32.high - 1'i32)
     return mc.requestId
 
-proc makeQuery(c: var MongoConnection, collection: string, query: Bson, fields: seq[string] = @[]): MongoCursor =
+
+proc makeQuery(c: var MongoConnection, collection: string, query: Bson, fields: seq[string] = @[]): FindQuery =
   # Create lazy query object to MongoDB that can be actually run
   # by one of the Find object procedures: `returnOne()` or `returnMany()`.
-  result = MongoCursor()
+  result = FindQuery()
   result.connection = c
   result.requestId = c.nextRequestId
   result.collectionName = collection
@@ -261,29 +284,30 @@ proc makeQuery(c: var MongoConnection, collection: string, query: Bson, fields: 
   result.writeConcern = c.writeConcern
 
 
-proc sort*(f: MongoCursor, order: Bson): MongoCursor =
-  ## Add sorting criteria to a query
+proc sort*(f: FindQuery, order: Bson): FindQuery =
+  ## Add sorting criteria to a query.
   ##
   ## this function DOES NOT affect the data on the database; merely the order
   ## in which found documents are presented from the query.
   ##
-  ## See https://docs.mongodb.com/manual/reference/method/cursor.sort/index.html
+  ## order
+  ##   See https://docs.mongodb.com/manual/reference/method/cursor.sort/index.html
   ##
-  ## Returns a new query copy
+  ## Returns a new ``FindQuery`` copy
   result = f
   result.query["$orderby"] = order
 
 
-proc skip*(f: MongoCursor, numSkip: int32): MongoCursor =
+proc skip*(f: FindQuery, numSkip: int32): FindQuery =
   ## For a query returning multiple documents, this specifies
   ## how many should be skipped first.
   ##
-  ## Returns a new query copy
+  ## Returns a new ``FindQuery`` copy.
   result = f
   result.nskip = numSkip
 
 
-proc limit*(f: MongoCursor, numLimit: int32): MongoCursor =
+proc limit*(f: FindQuery, numLimit: int32): FindQuery =
   ## Limits the number of documents the query will return
   ##
   ## Returns a new query copy
@@ -291,21 +315,26 @@ proc limit*(f: MongoCursor, numLimit: int32): MongoCursor =
   result.nlimit = numLimit
 
 
-proc find*(db: var MongoConnection, collection: string, criteria: Bson = %*{}, fields: seq[string] = @[]): MongoCursor =
+proc find*(db: var MongoConnection, collection: string, criteria: Bson = @@{}, fields: seq[string] = @[]): FindQuery =
   ## Starts a query to find documents in the database.
   ## 
-  ## 'criteria' specifies the search conditions
-  ## 'fields' limits which top-level fields are returned in each document found
+  ## collection
+  ##   The collection to search
+  ## criteria
+  ##   specifies the search conditions
+  ## fields 
+  ##   limits which top-level fields are returned in each document found
   ##
-  ## Returns a passive 'MongoQuery' object. Nothing useful is returned until
-  ## that object is applied to a "return" routine, such as 'returnOne' or 'returnMany'
-  let filter = %* {
+  ## Returns a passive 'FindQuery' object. Nothing useful is returned until
+  ## that object is applied to a "return" routine, such as ``returnOne``, 
+  ## ``returnMany``, or ``returnCount``.
+  let filter = @@ {
     "$query": criteria
   }
   result = makeQuery(db, collection, filter, fields)
 
 
-proc prepareQuery(f: MongoCursor, requestId: int32, numberToReturn: int32, numberToSkip: int32): string =
+proc prepareQuery(f: FindQuery, requestId: int32, numberToReturn: int32, numberToSkip: int32): string =
   # Prepare query and request queries for making OP_QUERY
   var bfields: Bson = newBsonDocument()
   if f.fields.len() > 0:
@@ -324,7 +353,7 @@ proc prepareQuery(f: MongoCursor, requestId: int32, numberToReturn: int32, numbe
   result &= sfields
 
 
-proc handleResponses(db: MongoCursor, target: Future[seq[Bson]]): Future[void] {.async.} =
+proc handleResponses(db: FindQuery, target: Future[seq[Bson]]): Future[void] {.async.} =
   var data: string = await db.connection.asocket.recv(4)
   if data == "":
     raise newException(CommunicationError, "Disconnected from MongoDB server")
@@ -360,7 +389,7 @@ proc handleResponses(db: MongoCursor, target: Future[seq[Bson]]): Future[void] {
 
 
 
-proc performFindAsync(f: MongoCursor,
+proc performFindAsync(f: FindQuery,
                       numberToReturn: int32,
                       numberToSkip: int32): Future[seq[Bson]] {.async.} =
   # Perform asynchronous OP_QUERY operation to MongoDB.
@@ -375,32 +404,32 @@ proc performFindAsync(f: MongoCursor,
   result = await response
 
 
-proc returnMany*(f: MongoCursor): seq[Bson] =
-  ## Executes the query and return the matching documents.
+proc returnMany*(f: FindQuery): seq[Bson] =
+  ## Executes the query and returns the matching documents.
   ##
   ## Returns a sequence of BSON documents.
   result = waitFor f.performFindAsync(f.nlimit, f.nskip)
 
 
-proc returnOne*(f: MongoCursor): Bson =
+proc returnOne*(f: FindQuery): Bson =
   ## Executes the query and return the first document
   ## if `skip` has been added to the query it will honor that and skip
   ## ahead before finding the first.
   ## 
   ## Returns a single BSON document. If nothing is found,
-  ## it generates a NotFound error.
+  ## it generates a ``NotFound`` error.
   let docs = waitFor f.performFindAsync(1, f.nskip)
   if docs.len == 0:
     raise newException(NotFound, "No documents matching query were found")
   return docs[0]
 
 
-proc returnCount*(f: MongoCursor): int =
+proc returnCount*(f: FindQuery): int =
   ## Executes the query and returns the count of documents found
-  ## rather than the documents themselves.
+  ## (rather than the documents themselves).
   ##
   ## If no documents are found, 0 is returned.
-  var count: MongoCursor = f
+  var count: FindQuery = f
   count.query["count"] = toBson(f.collectionName)
   count.query["query"] = f.query["$query"]
   count.query.del("$query")
@@ -416,9 +445,18 @@ proc returnCount*(f: MongoCursor): int =
 proc insertMany*(db: var MongoConnection, collection: string, documents: seq[Bson], ordered: bool = true, writeConcern: Bson = nil): seq[Bson] =
   ## Insert new documents into MongoDB.
   ##
-  ## Returns the newly inserted documents, including any _id fields auto-created.
-  ##
   ## If problems prevent the insertion, an error is generated.
+  ##
+  ## collection
+  ##   the collection to receive the new document(s)
+  ## documents
+  ##   a sequence of BSON documents to be inserted
+  ## ordered
+  ##   if true, the database should insert them one-after-the-next
+  ## writeConcern
+  ##   TBD0
+  ##
+  ## Returns the newly inserted documents, including any ``_id`` fields auto-created.
 
   # 
   # insert any missing _id fields
@@ -433,7 +471,7 @@ proc insertMany*(db: var MongoConnection, collection: string, documents: seq[Bso
   #
   # build & send Mongo query
   #
-  let request = %*{
+  let request = @@{
     "insert": collection,
     "documents": final_docs,
     "ordered": ordered,
@@ -450,6 +488,11 @@ proc insertOne*(db: var MongoConnection, collection: string, document: Bson, ord
   ##
   ## Returns the newly inserted document, including an _id field if auto-created.
   ##
+  ## collection
+  ##   the collection to receive the new document(s)
+  ## document
+  ##   the BSON documents to be inserted
+  ##
   ## If problems prevent the insertion, an error is generated.
   var temp = db.insertMany(collection, @[document], ordered, writeConcern)
   return temp[0]
@@ -462,17 +505,20 @@ proc updateMany*(db: var MongoConnection, collection: string, filter: Bson, upda
   ## https://docs.mongodb.com/manual/reference/method/db.collection.updateMany/
   ## for more details.
   ##
-  ## 'collection' is the name of the collection to update
-  ## 'filter' is a query limiting which documents should be updated
-  ## 'update' is a BSON description of what changes to make.
+  ## collection
+  ##   the name of the collection to update
+  ## filter
+  ##   a query limiting which documents should be updated
+  ## update
+  ##   a BSON description of what changes to make.
   ##
   ## Returns the count of documents given the update.
   ##
   ## Note: if a document already had the new values, it is still included
   ## in the final count.
-  let request = %* {
+  let request = @@ {
     "update": collection,
-    "updates": [%*{"q": filter, "u": update, "upsert": false, "multi": true}],
+    "updates": [@@{"q": filter, "u": update, "upsert": false, "multi": true}],
     "ordered": true
   }
   let response = makeQuery(db, "$cmd", request).returnOne()
@@ -488,20 +534,24 @@ proc replaceOne*(db: var MongoConnection, collection: string, filter: Bson, repl
   ## https://docs.mongodb.com/manual/reference/method/db.collection.updateOne/
   ## for more details.
   ##
-  ## 'collection' is the name of the collection to update
-  ## 'filter' is a query locating which document to be updated
-  ## 'replacement' is the new BSON document.
-  ## 'upsert' should be true if an insert should occur if the document is not found; otherwise set to false.
+  ## collection 
+  ##   the name of the collection to update
+  ## filter
+  ##   a query locating which document to be updated
+  ## replacement
+  ##   the new BSON document.
+  ## upsert 
+  ##   should be true if an insert should occur if the document is not found; otherwise set to false.
   ##
-  ## You can leave the '_id' field out of the replacement document and the
-  ## replacement will have the previous doc's '_id'.
+  ## You can leave the ``_id`` field out of the replacement document and the
+  ## replacement will have the previous doc's ``_id``.
   ##
   ## Returns a 1 if document was found matching the filter; otherwise 0.
   ##
   ## Note: it returns a 1 on a match even if the document already had the changes.
-  let request = %* {
+  let request = @@ {
     "update": collection,
-    "updates": [%*{"q": filter, "u": replacement, "upsert": upsert, "multi": false}],
+    "updates": [@@{"q": filter, "u": replacement, "upsert": upsert, "multi": false}],
     "ordered": true
   }
   let response = makeQuery(db, "$cmd", request).returnOne()
@@ -511,22 +561,26 @@ proc replaceOne*(db: var MongoConnection, collection: string, filter: Bson, repl
 
 proc deleteMany*(db: var MongoConnection, collection: string, filter: Bson, 
                  limit: int = 0, writeConcern: Bson = nil): int =
-  ## Delete multiple MongoDB documents.
+  ## Deletes multiple MongoDB documents.
   ##
   ## See:
   ## https://docs.mongodb.com/manual/reference/method/db.collection.deleteMany
   ## for more details.
   ##
-  ## 'collection' is the name of hte collection to update
-  ## 'filter' is a BSON query limiting which documents should be deleted
-  ## 'limit' restricts the number documents deleted. 0 means no limit.
-  ## 'writeConcern' TBD
+  ## collection 
+  ##   the name of hte collection to update
+  ## filter 
+  ##   a BSON query limiting which documents should be deleted
+  ## limit 
+  ##   restricts the number documents deleted. 0 means no limit.
+  ## writeConcern
+  ##   TBD
   ##
   ## Returns the number of documents deleted.
   let
-    request = %*{
+    request = @@{
       "delete": collection,
-      "deletes": [%*{"q": filter, "limit": limit}],
+      "deletes": [@@{"q": filter, "limit": limit}],
       "writeConcern": if writeConcern == nil.Bson: db.writeConcern else: writeConcern
     }
     response = makeQuery(db, "$cmd", request).returnOne()
@@ -536,19 +590,22 @@ proc deleteMany*(db: var MongoConnection, collection: string, filter: Bson,
 
 proc deleteOne*(db: var MongoConnection, collection: string, filter: Bson, 
                 writeConcern: Bson = nil): int =
-  ## Delete one MongoDB document.
+  ## Deletes one MongoDB document.
   ##
   ## See:
   ## https://docs.mongodb.com/manual/reference/method/db.collection.deleteOne
   ## for more details.
   ##
-  ## 'collection' is the name of hte collection to update
-  ## 'filter' is a BSON query to locate which document should be deleted
-  ## 'writeConcern' TBD
+  ## collection
+  ##   the name of the collection to update
+  ## filter
+  ##   a BSON query to locate which document should be deleted
+  ## writeConcern 
+  ##   TBD
   ##
-  ## This procedure is very similar to 'deleteMany' except that failure to
-  ## locate the document will raise a NotFound error. To avoid
-  ## NotFound error, simply use 'deleteMany' with a 'limit' set to 1.
+  ## This procedure is very similar to ``deleteMany`` except that failure to
+  ## locate the document will raise a ``NotFound`` error. To avoid the
+  ## ``NotFound`` error, simply use ``deleteMany`` with a ``limit`` set to 1.
   ##
   ## Returns the number of documents deleted, which will be 1.
   let count = deleteMany(db, collection, filter, limit=1, writeConcern=writeConcern)
@@ -561,17 +618,19 @@ proc getDatabase*(db: var MongoConnection): string =
   ## Get the current database name associated with this connection.
   ## This starts out as the database referenced in the connection URL,
   ## but can be changed with the changeDatabase procedure.
+  ##
+  ## Returns the name of the current database.
   result = db.currentDatabase
 
 
 proc changeDatabase*(db: var MongoConnection, database: string) =
   ## Change the current connection to use a different database than the
-  ## one specified in the connection URL. This is rarely an approved
-  ## behaviour of a non-admin account.
+  ## one specified in the connection URL. This is rarely approved
+  ## behaviour for non-admin accounts.
   ## Once changed, all future queries on this connection will be in
-  ## reference to this database.
+  ## reference to this database (until the thread closes).
   ##
-  ## See 'getDatabase' to get the current database name
+  ## See ``getDatabase`` to get the current database name
   db.currentDatabase = database
 
 # proc authMongodbCR*(db: Database[Mongo], username: string, password: string): bool {.discardable.} =
@@ -579,10 +638,10 @@ proc changeDatabase*(db: var MongoConnection, database: string) =
 #   if username == "" or password == "":
 #     return false
 
-#   let nonce: string = db["$cmd"].makeQuery(%*{"getnonce": 1'i32}).one()["nonce"]
+#   let nonce: string = db["$cmd"].makeQuery(@@{"getnonce": 1'i32}).one()["nonce"]
 #   let passwordDigest = $toMd5("$#:mongo:$#" % [username, password])
 #   let key = $toMd5("$#$#$#" % [nonce, username, passwordDigest])
-#   let request = %*{
+#   let request = @@{
 #     "authenticate": 1'i32,
 #     "mechanism": "MONGODB-CR",
 #     "user": username,
@@ -611,7 +670,7 @@ proc authScramSha1(pool: MongoPool, db: var MongoConnection): bool =
   #
   # request START
   #
-  let requestStart = %*{
+  let requestStart = @@{
     "saslStart": 1'i32,
     "mechanism": "SCRAM-SHA-1",
     "payload": bin(clientFirstMessage),
@@ -629,7 +688,7 @@ proc authScramSha1(pool: MongoPool, db: var MongoConnection): bool =
     passwordDigest = $toMd5("$#:mongo:$#" % [pool.username, pool.password])
     clientFinalMessage = scramClient.prepareFinalMessage(passwordDigest, responsePayload)
 
-  let requestContinue1 = %*{
+  let requestContinue1 = @@{
     "saslContinue": 1'i32,
     "conversationId": toInt32(responseStart["conversationId"]),
     "payload": bin(clientFinalMessage)
@@ -648,7 +707,7 @@ proc authScramSha1(pool: MongoPool, db: var MongoConnection): bool =
   # Depending on how it's configured, Cyrus SASL (which the server uses)
   # requires a third empty challenge.
   if not responseContinue1["done"].toBool():
-    let requestContinue2 = %*{
+    let requestContinue2 = @@{
       "saslContinue": 1'i32,
       "conversationId": responseContinue1["conversationId"],
       "payload": ""
@@ -778,18 +837,22 @@ proc connectMongoPool*(url: string, minConnections = 4, maxConnections = 20) =
   ##
   ##     mongodb://[username:password@]host1[:port1][,...hostN[:portN]][/[database][?options]]
   ##
-  ## It is highly recommended that you include the `database` name in the URL.
-  ## Otherwise it will default to "admin", which is probably not right.
-  ## If the 'username' is not present, then the connection is assumed to not
-  ## support authentication. If an `authMechanism` option is not present, but
-  ## a username is supplies, then the authenication is assumed to be SCRAM-SHA-1.
-  ## If the 'authSource' option is not present, the database used just for
-  ## authentication is assumed to be the main 'database' name.
+  ## It is recommended that you include the `database` name in the URL.
+  ## Otherwise, it will default to "admin", which is probably not right.
+  ## If the ``username`` is not present, then the connection is assumed to not
+  ## support authentication. If an ``authMechanism`` option is not present, but
+  ## a ``username`` is supplied, then the authenication is assumed to be SCRAM-SHA-1.
+  ## If the ``authSource`` option is not present, the database used just for
+  ## authentication is assumed to be the main ``database`` name.
   ##
-  ## 'minConnections' determines the number database connections to start with
-  ## 'maxConnections' determines the maximum allowed *active* connections
+  ## url
+  ##   url of the MongoDB server to connect to
+  ## minConnections 
+  ##   determines the number database connections to start with
+  ## maxConnections
+  ##   determines the maximum allowed *active* connections
   ##
-  ## Behind the scenes, a global variable called "masterPool" is created. This
+  ## Behind the scenes, a global variable called ``masterPool`` is created. That
   ## variable is private to this library.
   masterPool.connectMongoPoolSpecific(url, minConnections, maxConnections)
 
@@ -852,7 +915,11 @@ proc getNextFromSpecific(pool: var MongoPool): MongoConnection =
 proc getNextConnection*(): MongoConnection =
   ## Get a connection from a non-threaded context.
   ##
+  ## You will want to call 'releaseConnection' when done.
+  ##
   ## This is mostly used for unit testing and sample code.
+  ##
+  ## Returns a single connection to the database.
   result = getNextFromSpecific(masterPool)
 
 
@@ -866,12 +933,14 @@ proc getNextConnectionAsThread*(): MongoConnection {.gcsafe.} =
   ## When a thread has spawned, the code in the thread can safely get
   ## one of the pre-authenticated establlished connections from the pool.
   ## 
-  ## You will want to call 'returnConnectionAsThread' with the connection
+  ## You will want to call 'releaseConnection' with the connection
   ## before your thread terminates. Otherwise, the connection will never be
   ## release.
   ##
   ## Behind the scenes, a special 'threadvar' called 'dbThread' is "instanced"
   ## for your thread using the thread's own memory management context.
+  ##
+  ## Returns a single connection to the database.
   let temp = getNextFromSpecific(masterPool)
   dbThread = MongoConnection()
   dbThread.id = temp.id

@@ -1,5 +1,6 @@
 Introduction to mongopool
 ==============================================================================
+ver 0.1.0
 
 .. image:: https://raw.githubusercontent.com/yglukhov/nimble-tag/master/nimble.png
    :height: 34
@@ -8,16 +9,14 @@ Introduction to mongopool
 
 #########################################
 #########################################
-MONGOPOOL
-
 A simple pure-nim mongodb pooled client designed for use with threaded
-applications such as "Jester".
+applications such as `Jester <https://github.com/dom96/jester>`__.
 
 HOW TO USE (UNTHREADED)
------------------------
+=======================
 
-1. Import the library (duh.) But, you will also *really* want the 'bson'
-   library as well since you will be sending the documents as BSON.
+1. Import the library. But, you will also *really* want the `bson <https://github.com/JohnAD/bson>`__
+   library as well since you will be using BSON documents.
 
 .. code:: nim
 
@@ -36,11 +35,11 @@ HOW TO USE (UNTHREADED)
 
     var db = getNextConnection()
 
-4. Use it to do things! See the section called "BASIC CRUD" for quick examples.
+4. Use it to do things! See the section called `BASIC CRUD <#basic-crud>`__ for quick examples.
 
 .. code:: nim
 
-    var doc = db.find("mycollection", %*{"name": "jerry"}).returnOne()
+    var doc = db.find("mycollection", @@{"name": "jerry"}).returnOne()
 
 5. Release the connection when done.
 
@@ -49,11 +48,11 @@ HOW TO USE (UNTHREADED)
     releaseConnection(db)
 
 HOW TO USE (THREADED)
----------------------
+=====================
 
 The whole point of this library is threaded application use. The biggest
-change is that the connection is pulled using 'getNextConnectionAsThread'
-instead of 'getNextConnection'. Of course, that will only work from inside
+change is that the connection is pulled using ``getNextConnectionAsThread``
+instead of ``getNextConnection``. Of course, that will only work from inside
 the thread. Here is an example that uses Jester to make a web site:
 
 .. code:: nim
@@ -82,13 +81,15 @@ the thread. Here is an example that uses Jester to make a web site:
         resp "doc = " & $doc
 
 BASIC CRUD
-----------
+==========
 
-Some quick examples of how to Create, Read, Update, and Delete. See the
-appendix reference for more details.
+Some quick examples of how to Create, Read, Update, and Delete and their
+related functions. See the appendix references for more details.
 
 CREATE
 ======
+
+Example:
 
 .. code:: nim
 
@@ -97,7 +98,7 @@ CREATE
     connectMongoPool("mongodb://someone:secret@mongo.domain.com:27017/abc")
     var db = getNextConnection()
 
-    let joe = %*{
+    let joe = @@{
       "name": "Joe",
       "age": 42
     }
@@ -106,8 +107,12 @@ CREATE
 
     releaseConnection(db)
 
+related functions:
+`insertMany<https://github.com/JohnAD/mongopool/blob/master/docs/mongopool-ref.rst#insertMany.p>`__,
+`insertOne<https://github.com/JohnAD/mongopool/blob/master/docs/mongopool-ref.rst#insertOne.p>`__
+
 READ (FIND)
-===========
+-----------
 
 .. code:: nim
 
@@ -116,15 +121,26 @@ READ (FIND)
     connectMongoPool("mongodb://someone:secret@mongo.domain.com:27017/abc")
     var db = getNextConnection()
 
-    var docs = db.find("people", %*{"age": {"$gt": 21}}).sort(%*{"name": 1}).limit(10).returnMany()
+    var docs = db.find("people", @@{"age": {"$gt": 21}}).sort(@@{"name": 1}).limit(10).returnMany()
 
     for doc in docs:
       echo "name: $1, age $2".format(doc["name"], doc["age"])
 
     releaseConnection(db)
 
+related functions:
+* to start the query: `find<https://github.com/JohnAD/mongopool/blob/master/docs/mongopool-ref.rst#find.p>`__
+* to modify the query:
+  `limit<https://github.com/JohnAD/mongopool/blob/master/docs/mongopool-ref.rst#limit.p>`__,
+  `skip<https://github.com/JohnAD/mongopool/blob/master/docs/mongopool-ref.rst#skip.p>`__,
+  `sort<https://github.com/JohnAD/mongopool/blob/master/docs/mongopool-ref.rst#sort.p>`__
+* to get results from the query:
+  `returnCount<https://github.com/JohnAD/mongopool/blob/master/docs/mongopool-ref.rst#returnCount.p>`__,
+  `returnMany<https://github.com/JohnAD/mongopool/blob/master/docs/mongopool-ref.rst#returnMany.p>`__,
+  `returnOne<https://github.com/JohnAD/mongopool/blob/master/docs/mongopool-ref.rst#returnOne.p>`__
+
 UPDATE
-======
+------
 
 .. code:: nim
 
@@ -133,16 +149,20 @@ UPDATE
     connectMongoPool("mongodb://someone:secret@mongo.domain.com:27017/abc")
     var db = getNextConnection()
 
-    var joe = db.find("people", %*{"name": "Joe"}).returnOne()
+    var joe = db.find("people", @@{"name": "Joe"}).returnOne()
     joe["age"] = 43
-    let ctr = db.replaceOne(%*{"_id": joe["_id"]}, joe)
+    let ctr = db.replaceOne(@@{"_id": joe["_id"]}, joe)
     if ctr == 1:
       echo "change made!"
 
     releaseConnection(db)
 
+related functions:
+`replaceOne<https://github.com/JohnAD/mongopool/blob/master/docs/mongopool-ref.rst#replaceOne.p>`__,
+`deleteOne<https://github.com/JohnAD/mongopool/blob/master/docs/mongopool-ref.rst#deleteOne.p>`__
+
 DELETE
-======
+------
 
 .. code:: nim
 
@@ -151,11 +171,14 @@ DELETE
     connectMongoPool("mongodb://someone:secret@mongo.domain.com:27017/abc")
     var db = getNextConnection()
 
-    var ctr = db.deleteMany("people", %*{"name": "Larry"})
+    var ctr = db.deleteMany("people", @@{"name": "Larry"})
     echo "$1 people named Larry removed.".format(ctr)
 
     releaseConnection(db)
 
+related functions:
+`deleteMany<https://github.com/JohnAD/mongopool/blob/master/docs/mongopool-ref.rst#deleteMany.p>`__,
+`deleteOne<https://github.com/JohnAD/mongopool/blob/master/docs/mongopool-ref.rst#deleteOne.p>`__
 
 
 
@@ -166,5 +189,4 @@ Table Of Contents
 2. Appendices
 
     A. `mongopool Reference <docs/mongopool-ref.rst>`__
-    B. `mongopool/errors General Documentation <docs/mongopool-errors-gen.rst>`__
-    C. `mongopool/errors Reference <docs/mongopool-errors-ref.rst>`__
+    B. `mongopool/errors Reference <docs/mongopool-errors-ref.rst>`__
