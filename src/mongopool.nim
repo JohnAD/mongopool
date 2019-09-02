@@ -127,11 +127,14 @@
 ##     releaseConnection(db)
 ##
 ## related functions:
+##
 ## * to start the query: `find <https://github.com/JohnAD/mongopool/blob/master/docs/mongopool-ref.rst#find>`__
+##
 ## * to modify the query: 
 ##   `limit <https://github.com/JohnAD/mongopool/blob/master/docs/mongopool-ref.rst#limit>`__,
 ##   `skip <https://github.com/JohnAD/mongopool/blob/master/docs/mongopool-ref.rst#skip>`__,
 ##   `sort <https://github.com/JohnAD/mongopool/blob/master/docs/mongopool-ref.rst#sort>`__
+##
 ## * to get results from the query: 
 ##   `returnCount <https://github.com/JohnAD/mongopool/blob/master/docs/mongopool-ref.rst#returncount>`__, 
 ##   `returnMany <https://github.com/JohnAD/mongopool/blob/master/docs/mongopool-ref.rst#returnmany>`__, 
@@ -149,7 +152,7 @@
 ##
 ##     var joe = db.find("people", @@{"name": "Joe"}).returnOne()
 ##     joe["age"] = 43
-##     let ctr = db.replaceOne(@@{"_id": joe["_id"]}, joe)
+##     let ctr = db.replaceOne("people", @@{"_id": joe["_id"]}, joe)
 ##     if ctr == 1:
 ##       echo "change made!"
 ##
@@ -454,7 +457,7 @@ proc insertMany*(db: var MongoConnection, collection: string, documents: seq[Bso
   ## ordered
   ##   if true, the database should insert them one-after-the-next
   ## writeConcern
-  ##   TBD0
+  ##   TBD
   ##
   ## Returns the newly inserted documents, including any ``_id`` fields auto-created.
 

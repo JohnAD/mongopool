@@ -1,23 +1,32 @@
 import unittest
 
-import mongopool
+import mongopool, bson
 
-suite "Non-threaded test with global usage":
-  test "generic assignment":
+suite "Non-threaded test":
+  test "connect and do CRUD":
 
-    # TBD
-    u = User(age: 22)
-    check $u == "(age: 22)"
-    check repr(u) == "N[User](age: 22)"
+    connectMongoPool("mongodb://127.0.0.1/test")    
 
-    u = nothing(User)
-    check $u == "nothing"
-    check repr(u) == "N[User](nothing)"
+    var db = getNextConnection()
 
-    u = null(User)
-    check $u == "null"
-    check repr(u) == "N[User](null)"
+    check db.getDatabase() == "test"
 
-    u.setError ValueError(msg: "test")
-    check $u == "@[ValueError(test)]"
-    check repr(u) == "N[User]@[\n  ValueError(test) at (filename: \"tgeneric.nim\", line: 25, column: 5)\n]"
+    let joe = @@{
+      "name": "Joe",
+      "age": 42
+    }
+
+    var joeReal = db.insertOne("people", joe)
+
+    check joeReal["name"] == "Joe"
+    check joeReal["age"] == 42
+
+    joeReal["age"] = toBson(43)
+
+    let updateCtr = db.replaceOne("people", @@{"_id": joeReal["_id"]}, joeReal)
+
+    check updateCtr == 1
+
+    let delCtr = db.deleteMany("people", @@{"_id": joeReal["_id"]})
+
+    check delCtr == 1
