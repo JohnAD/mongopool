@@ -103,8 +103,8 @@ Example:
     releaseConnection(db)
 
 related functions:
-`insertMany<https://github.com/JohnAD/mongopool/blob/master/docs/mongopool-ref.rst#insertMany.p>`__,
-`insertOne<https://github.com/JohnAD/mongopool/blob/master/docs/mongopool-ref.rst#insertOne.p>`__
+`insertMany <https://github.com/JohnAD/mongopool/blob/master/docs/mongopool-ref.rst#insertMany.p>`__,
+`insertOne <https://github.com/JohnAD/mongopool/blob/master/docs/mongopool-ref.rst#insertOne.p>`__
 
 READ (FIND)
 -----------
@@ -124,15 +124,15 @@ READ (FIND)
     releaseConnection(db)
 
 related functions:
-* to start the query: `find<https://github.com/JohnAD/mongopool/blob/master/docs/mongopool-ref.rst#find.p>`__
+* to start the query: `find <https://github.com/JohnAD/mongopool/blob/master/docs/mongopool-ref.rst#find.p>`__
 * to modify the query:
-  `limit<https://github.com/JohnAD/mongopool/blob/master/docs/mongopool-ref.rst#limit.p>`__,
-  `skip<https://github.com/JohnAD/mongopool/blob/master/docs/mongopool-ref.rst#skip.p>`__,
-  `sort<https://github.com/JohnAD/mongopool/blob/master/docs/mongopool-ref.rst#sort.p>`__
+  `limit <https://github.com/JohnAD/mongopool/blob/master/docs/mongopool-ref.rst#limit.p>`__,
+  `skip <https://github.com/JohnAD/mongopool/blob/master/docs/mongopool-ref.rst#skip.p>`__,
+  `sort <https://github.com/JohnAD/mongopool/blob/master/docs/mongopool-ref.rst#sort.p>`__
 * to get results from the query:
-  `returnCount<https://github.com/JohnAD/mongopool/blob/master/docs/mongopool-ref.rst#returnCount.p>`__,
-  `returnMany<https://github.com/JohnAD/mongopool/blob/master/docs/mongopool-ref.rst#returnMany.p>`__,
-  `returnOne<https://github.com/JohnAD/mongopool/blob/master/docs/mongopool-ref.rst#returnOne.p>`__
+  `returnCount <https://github.com/JohnAD/mongopool/blob/master/docs/mongopool-ref.rst#returnCount.p>`__,
+  `returnMany <https://github.com/JohnAD/mongopool/blob/master/docs/mongopool-ref.rst#returnMany.p>`__,
+  `returnOne <https://github.com/JohnAD/mongopool/blob/master/docs/mongopool-ref.rst#returnOne.p>`__
 
 UPDATE
 ------
@@ -153,8 +153,8 @@ UPDATE
     releaseConnection(db)
 
 related functions:
-`replaceOne<https://github.com/JohnAD/mongopool/blob/master/docs/mongopool-ref.rst#replaceOne.p>`__,
-`deleteOne<https://github.com/JohnAD/mongopool/blob/master/docs/mongopool-ref.rst#deleteOne.p>`__
+`replaceOne <https://github.com/JohnAD/mongopool/blob/master/docs/mongopool-ref.rst#replaceOne.p>`__,
+`deleteOne <https://github.com/JohnAD/mongopool/blob/master/docs/mongopool-ref.rst#deleteOne.p>`__
 
 DELETE
 ------
@@ -172,8 +172,8 @@ DELETE
     releaseConnection(db)
 
 related functions:
-`deleteMany<https://github.com/JohnAD/mongopool/blob/master/docs/mongopool-ref.rst#deleteMany.p>`__,
-`deleteOne<https://github.com/JohnAD/mongopool/blob/master/docs/mongopool-ref.rst#deleteOne.p>`__
+`deleteMany <https://github.com/JohnAD/mongopool/blob/master/docs/mongopool-ref.rst#deleteMany.p>`__,
+`deleteOne <https://github.com/JohnAD/mongopool/blob/master/docs/mongopool-ref.rst#deleteOne.p>`__
 
 
 
