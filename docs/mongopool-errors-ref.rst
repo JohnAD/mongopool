@@ -19,7 +19,7 @@ CommunicationError
         CommunicationError* = object of Exception
 
 
-    *source line: `2 <src/mongopool/errors.nim#L2>`__*
+    *source line: `2 <../src/mongopool/errors.nim#L2>`__ *
 
     Raises on communication problems with MongoDB server
 
@@ -33,7 +33,7 @@ MongoPoolError
         MongoPoolError* = object of Exception
 
 
-    *source line: `5 <src/mongopool/errors.nim#L5>`__*
+    *source line: `5 <../src/mongopool/errors.nim#L5>`__ *
 
     Base exception for nimongo error (for simplifying error handling)
 
@@ -47,7 +47,7 @@ NotFound
         NotFound* = object of MongoPoolError
 
 
-    *source line: `8 <src/mongopool/errors.nim#L8>`__*
+    *source line: `8 <../src/mongopool/errors.nim#L8>`__ *
 
     Raises when querying of one documents returns empty result
 
@@ -61,7 +61,7 @@ ReplyFieldMissing
         ReplyFieldMissing* = object of MongoPoolError
 
 
-    *source line: `11 <src/mongopool/errors.nim#L11>`__*
+    *source line: `11 <../src/mongopool/errors.nim#L11>`__ *
 
     Raises when reqired field in reply is missing
 
