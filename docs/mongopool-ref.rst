@@ -20,7 +20,7 @@ changeDatabase
 
         proc changeDatabase*(db: var MongoConnection, database: string) =
 
-    source line: `658 <../src/mongopool.nim#L658>`__
+    source line: `659 <../src/mongopool.nim#L659>`__
 
     Change the current connection to use a different database than the
     one specified in the connection URL. This is rarely approved
@@ -39,7 +39,7 @@ connectMongoPool
 
         proc connectMongoPool*(url: string, minConnections = 4, maxConnections = 20) {.gcsafe.} =
 
-    source line: `808 <../src/mongopool.nim#L808>`__
+    source line: `809 <../src/mongopool.nim#L809>`__
 
     This procedure connects to the MongoDB database using the supplied
     `url` string. That URL should be in the form of:
@@ -79,7 +79,7 @@ deleteMany
 
         proc deleteMany*(db: var MongoConnection, collection: string, filter: Bson, limit: int = 0, writeConcern: Bson = nil): int =
 
-    source line: `596 <../src/mongopool.nim#L596>`__
+    source line: `597 <../src/mongopool.nim#L597>`__
 
     Deletes multiple MongoDB documents.
     
@@ -107,7 +107,7 @@ deleteOne
 
         proc deleteOne*(db: var MongoConnection, collection: string, filter: Bson, writeConcern: Bson = nil): int =
 
-    source line: `624 <../src/mongopool.nim#L624>`__
+    source line: `625 <../src/mongopool.nim#L625>`__
 
     Deletes one MongoDB document.
     
@@ -161,7 +161,7 @@ getDatabase
 
         proc getDatabase*(db: var MongoConnection): string =
 
-    source line: `649 <../src/mongopool.nim#L649>`__
+    source line: `650 <../src/mongopool.nim#L650>`__
 
     Get the current database name associated with this connection.
     This starts out as the database referenced in the connection URL,
@@ -178,7 +178,7 @@ getMongoPoolStatus
 
         proc getMongoPoolStatus*(): string {.gcsafe.} =
 
-    source line: `899 <../src/mongopool.nim#L899>`__
+    source line: `900 <../src/mongopool.nim#L900>`__
 
     Returns a string showing the database pool's current state.
     
@@ -215,7 +215,7 @@ getNextConnection
 
         proc getNextConnection*(): MongoConnection {.gcsafe.} =
 
-    source line: `968 <../src/mongopool.nim#L968>`__
+    source line: `969 <../src/mongopool.nim#L969>`__
 
     Get a connection from the MongoDB pool.
     
@@ -245,7 +245,7 @@ insertMany
 
         proc insertMany*(db: var MongoConnection, collection: string, documents: seq[Bson], ordered: bool = true, writeConcern: Bson = nil): seq[Bson] =
 
-    source line: `479 <../src/mongopool.nim#L479>`__
+    source line: `480 <../src/mongopool.nim#L480>`__
 
     Insert new documents into MongoDB.
     
@@ -271,7 +271,7 @@ insertOne
 
         proc insertOne*(db: var MongoConnection, collection: string, document: Bson, ordered: bool = true, writeConcern: Bson = nil): Bson =
 
-    source line: `520 <../src/mongopool.nim#L520>`__
+    source line: `521 <../src/mongopool.nim#L521>`__
 
     Insert one new document into MongoDB
     
@@ -308,7 +308,7 @@ releaseConnection
 
         proc releaseConnection*(mc: MongoConnection) {.gcsafe.} =
 
-    source line: `1005 <../src/mongopool.nim#L1005>`__
+    source line: `1006 <../src/mongopool.nim#L1006>`__
 
     Release a live database connection back to the MongoDB pool.
     
@@ -323,7 +323,7 @@ replaceOne
 
         proc replaceOne*(db: var MongoConnection, collection: string, filter: Bson, replacement: Bson, upsert = false): int =
 
-    source line: `564 <../src/mongopool.nim#L564>`__
+    source line: `565 <../src/mongopool.nim#L565>`__
 
     Replace one MongoDB document.
     
@@ -356,7 +356,7 @@ returnCount
 
         proc returnCount*(f: FindQuery): int =
 
-    source line: `461 <../src/mongopool.nim#L461>`__
+    source line: `462 <../src/mongopool.nim#L462>`__
 
     Executes the query and returns the count of documents found
     (rather than the documents themselves).
@@ -389,8 +389,9 @@ returnOne
 
     source line: `448 <../src/mongopool.nim#L448>`__
 
-    Executes the query and return the first document
-    if `skip` has been added to the query it will honor that and skip
+    Executes the query and returns the first document.
+    
+    If `skip` has been added to the query it will honor that and skip
     ahead before finding the first.
     
     Returns a single BSON document. If nothing is found,
@@ -442,7 +443,7 @@ updateMany
 
         proc updateMany*(db: var MongoConnection, collection: string, filter: Bson, update: Bson): int =
 
-    source line: `535 <../src/mongopool.nim#L535>`__
+    source line: `536 <../src/mongopool.nim#L536>`__
 
     Update multiple MongoDB documents.
     

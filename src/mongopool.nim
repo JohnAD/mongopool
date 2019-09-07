@@ -94,7 +94,7 @@
 ## related functions. See the appendix references for more details.
 ##
 ## CREATE
-## ======
+## ------
 ## 
 ## Example:
 ##
@@ -446,8 +446,9 @@ proc returnMany*(f: FindQuery): seq[Bson] =
 
 
 proc returnOne*(f: FindQuery): Bson =
-  ## Executes the query and return the first document
-  ## if `skip` has been added to the query it will honor that and skip
+  ## Executes the query and returns the first document.
+  ##
+  ## If `skip` has been added to the query it will honor that and skip
   ## ahead before finding the first.
   ## 
   ## Returns a single BSON document. If nothing is found,

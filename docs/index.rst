@@ -91,7 +91,7 @@ Some quick examples of how to Create, Read, Update, and Delete and their
 related functions. See the appendix references for more details.
 
 CREATE
-======
+------
 
 Example:
 

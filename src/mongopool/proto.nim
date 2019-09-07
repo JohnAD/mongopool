@@ -2,6 +2,9 @@ import bson
 
 const OP_QUERY = 2004'i32  ## OP_QUERY operation code (wire protocol)
 
+proc int32ToBytes(x: int32, res: var string) =
+    res &= x.toBson.bytes()
+
 proc buildMessageHeader*(messageLength, requestId, responseTo: int32, res: var string) =
     ## Build Mongo message header as a series of bytes
     int32ToBytes(messageLength, res)
