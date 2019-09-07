@@ -203,6 +203,7 @@ import times
 import uri
 import os
 import deques
+import re
 
 import bson except `()`
 
@@ -224,23 +225,23 @@ type
     requestId: int32
     currentDatabase: string
     writeConcern: WriteConcern
-  MongoPool = object
-    originalUrl: string
-    hostname: string
-    port: uint16
-    username: string
-    password: string
-    database: string
-    options: Table[string, string]
-    authMechanism: string
-    authDatabase: string
-    asockets: Table[int, AsyncSocket]
-    connStatus: Table[int, string]
-    working: seq[int]
-    available: Deque[int]
-    minConnections: int
-    maxConnections: int
-    writeConcern: WriteConcern
+  # MongoPool = object
+  #   originalUrl: string
+  #   hostname: string
+  #   port: uint16
+  #   username: string
+  #   password: string
+  #   database: string
+  #   options: Table[string, string]
+  #   authMechanism: string
+  #   authDatabase: string
+  #   asockets: Table[int, AsyncSocket]
+  #   connStatus: Table[int, string]
+  #   working: seq[int]
+  #   available: Deque[int]
+  #   minConnections: int
+  #   maxConnections: int
+  #   writeConcern: WriteConcern
   FindQuery = object     ## MongoDB cursor: manages queries object lazily
     connection: MongoConnection
     requestId: int32
@@ -258,9 +259,30 @@ type
 # Global variables
 #
 
-var masterPool = MongoPool()
+# var masterPool = MongoPool()
 
-var dbThread {.threadvar.}: MongoConnection
+var
+  masterPool_originalUrl: string
+  masterPool_hostname: string
+  masterPool_port: uint16
+  masterPool_username: string
+  masterPool_password: string
+  masterPool_database: string
+  masterPool_options: Table[string, string]
+  masterPool_authMechanism: string
+  masterPool_authDatabase: string
+  masterPool_asockets: Table[int, AsyncSocket]
+  masterPool_connStatus: Table[int, string]
+  masterPool_working: seq[int] = @[]
+  masterPool_available: Deque[int]
+  masterPool_minConnections: int
+  masterPool_maxConnections: int
+  masterPool_writeConcern: WriteConcern
+
+
+when compileOption("threads"):
+  var dbThread {.threadvar.}: MongoConnection
+  let masterThreadId = getThreadId()
 
 #
 # supporting procedures
@@ -562,8 +584,7 @@ proc replaceOne*(db: var MongoConnection, collection: string, filter: Bson, repl
   handleWriteErrors(response)
   result = response.getReplyN
 
-proc deleteMany*(db: var MongoConnection, collection: string, filter: Bson, 
-                 limit: int = 0, writeConcern: Bson = nil): int =
+proc deleteMany*(db: var MongoConnection, collection: string, filter: Bson, limit: int = 0, writeConcern: Bson = nil): int =
   ## Deletes multiple MongoDB documents.
   ##
   ## See:
@@ -591,8 +612,7 @@ proc deleteMany*(db: var MongoConnection, collection: string, filter: Bson,
   return response.getReplyN
 
 
-proc deleteOne*(db: var MongoConnection, collection: string, filter: Bson, 
-                writeConcern: Bson = nil): int =
+proc deleteOne*(db: var MongoConnection, collection: string, filter: Bson, writeConcern: Bson = nil): int =
   ## Deletes one MongoDB document.
   ##
   ## See:
@@ -664,11 +684,11 @@ proc decodeQuery(u: Uri): Table[string, string] =
       result[parts[0]] = parts[1]
 
 
-proc authScramSha1(pool: MongoPool, db: var MongoConnection): bool =
+proc authScramSha1(db: var MongoConnection): bool =
   ## Authenticate connection (async) using the SCRAM-SHA-1 method
 
   var scramClient = newScramClient[SHA1Digest]()
-  let clientFirstMessage = scramClient.prepareFirstMessage(pool.username)
+  let clientFirstMessage = scramClient.prepareFirstMessage(masterPool_username)
 
   #
   # request START
@@ -688,7 +708,7 @@ proc authScramSha1(pool: MongoPool, db: var MongoConnection): bool =
   #
   let
     responsePayload = binstr(responseStart["payload"])
-    passwordDigest = $toMd5("$#:mongo:$#" % [pool.username, pool.password])
+    passwordDigest = $toMd5("$#:mongo:$#" % [masterPool_username, masterPool_password])
     clientFinalMessage = scramClient.prepareFinalMessage(passwordDigest, responsePayload)
 
   let requestContinue1 = @@{
@@ -722,117 +742,61 @@ proc authScramSha1(pool: MongoPool, db: var MongoConnection): bool =
   return true
 
 
-proc addConnection(pool: var MongoPool) = 
-  #
-  # get next largest number
-  #
-  var largest_so_far = 0
-  for i in pool.asockets.keys:
-    if i > largest_so_far:
-      largest_so_far = i
-  let next = largest_so_far + 1
-  #
-  # add one more entry
-  #
-  pool.asockets[next] = newAsyncSocket()
-  pool.connStatus[next] = "pending TCP connect"
-  #
-  # establish a connection to the server
-  #
-  try:
-    waitFor pool.asockets[next].connect(pool.hostname, asyncdispatch.Port(pool.port))
-    pool.connStatus[next] = "TCP/IP connected"
-  except OSError:
-    pool.connStatus[next] = "failed basic TCP/IP connection"
-    sleep(400)
-    return
-  #
-  # now authenticate the connection
-  #
-  try:
-    var authResult = true
-    case pool.authMechanism:
-    of "SCRAM-SHA-1":
-      var tempConn = MongoConnection()
-      tempConn.id = next
-      tempConn.asocket = pool.asockets[next]
-      tempConn.currentDatabase = pool.authDatabase
-      authResult = authScramSha1(pool, tempConn)
-      if authResult:
-        pool.connStatus[next] = "Authenticated socket ready."
-      else:
-        pool.connStatus[next] = "Failed authentication."
-    of "MONGODB-CR":
-      pool.connStatus[next] = "[UNSUPPORTED] Unauthenticated socket ready."
-    else:
-      pool.connStatus[next] = "Unauthenticated socket ready."
-    if authResult:
-      pool.available.addLast(next) # only add it if the connection works
-      pool.working.add next
-  except:
-    echo getCurrentExceptionMsg()
-    sleep(200)
-    return
-
-proc initMongoPool(): MongoPool =
-  result = MongoPool()
-
-proc connectMongoPoolSpecific(pool: var MongoPool, url: string, minConnections = 4, maxConnections = 20) =
-  #
-  # parse the URL
-  #
-  var uDetail = parseUri(url)
-  pool.originalUrl = url
-  pool.hostname = uDetail.hostname
-  pool.port = if uDetail.port.len > 0: parseInt(uDetail.port).uint16 else: 27017'u16
-  pool.username = uDetail.username
-  pool.password = uDetail.password
-  pool.database = uDetail.path.extractFileName()
-  pool.options = decodeQuery(uDetail)
-  #
-  # assign auth method details
-  #
-  if pool.username == "":
-    pool.authMechanism = "NONE"
-  else:
-    if "authMechanism" in pool.options:
-      let mech = pool.options["authMechanism"]
-      case mech:
+proc addConnection() {.gcsafe.} = 
+  {.gcsafe.}:
+    #
+    # get next largest number
+    #
+    var largest_so_far = 0
+    for i in masterPool_asockets.keys:
+      if i > largest_so_far:
+        largest_so_far = i
+    let next = largest_so_far + 1
+    #
+    # add one more entry
+    #
+    masterPool_asockets[next] = newAsyncSocket()
+    masterPool_connStatus[next] = "pending TCP connect"
+    #
+    # establish a connection to the server
+    #
+    try:
+      waitFor masterPool_asockets[next].connect(masterPool_hostname, asyncdispatch.Port(masterPool_port))
+      masterPool_connStatus[next] = "TCP/IP connected"
+    except OSError:
+      masterPool_connStatus[next] = "failed basic TCP/IP connection"
+      sleep(400)
+      return
+    #
+    # now authenticate the connection
+    #
+    try:
+      var authResult = true
+      case masterPool_authMechanism:
       of "SCRAM-SHA-1":
-        pool.authMechanism = mech
+        var tempConn = MongoConnection()
+        tempConn.id = next
+        tempConn.asocket = masterPool_asockets[next]
+        tempConn.currentDatabase = masterPool_authDatabase
+        authResult = authScramSha1(tempConn)
+        if authResult:
+          masterPool_connStatus[next] = "Authenticated socket ready."
+        else:
+          masterPool_connStatus[next] = "Failed authentication."
       of "MONGODB-CR":
-        pool.authMechanism = mech
+        masterPool_connStatus[next] = "[UNSUPPORTED] Unauthenticated socket ready."
       else:
-        raise newException(CommunicationError, 
-                           "MongoPool library does not currently support the " &
-                           "$1 authentication mechanism.".format(mech))
-    else:
-      pool.authMechanism = "SCRAM-SHA-1"
-    if "authSource" in pool.options:
-      pool.authDatabase = pool.options["authSource"]
-    else:
-      pool.authDatabase = pool.database
-  if pool.authDatabase == "":
-    pool.authDatabase = "admin"
-  pool.writeConcern = writeConcernDefault()
-  #
-  # establish the minimum connections
-  #
-  pool.minConnections = minConnections
-  pool.maxConnections = maxConnections
-  pool.asockets = initTable[int, AsyncSocket]()
-  pool.connStatus = initTable[int, string]()
-  pool.available = initDeque[int]()
-  for i in 1..minConnections:
-    addConnection(pool)
-  #
-  # check everything
-  #
-  if pool.available.len == 0:
-    raise newException(CommunicationError, "unable to connect to $1".format(url))
+        masterPool_connStatus[next] = "Unauthenticated socket ready."
+      if authResult:
+        masterPool_available.addLast(next) # only add it if the connection works
+        masterPool_working.add next
+    except:
+      echo getCurrentExceptionMsg()
+      sleep(200)
+      return
 
 
-proc connectMongoPool*(url: string, minConnections = 4, maxConnections = 20) =
+proc connectMongoPool*(url: string, minConnections = 4, maxConnections = 20) {.gcsafe.} =
   ## This procedure connects to the MongoDB database using the supplied
   ## `url` string. That URL should be in the form of:
   ## 
@@ -857,18 +821,79 @@ proc connectMongoPool*(url: string, minConnections = 4, maxConnections = 20) =
   ##
   ## Behind the scenes, a global variable called ``masterPool`` is created. That
   ## variable is private to this library.
-  masterPool.connectMongoPoolSpecific(url, minConnections, maxConnections)
+  #
+  # parse the URL
+  #
+  when compileOption("threads"):
+    if masterThreadId != getThreadId():
+      raise newException(OSError, "You cannot call connectMongoPool from within a thread.")
+  {.gcsafe.}:
+    var uDetail = parseUri(url)
+    masterPool_originalUrl = url
+    masterPool_hostname = uDetail.hostname
+    masterPool_port = if uDetail.port.len > 0: parseInt(uDetail.port).uint16 else: 27017'u16
+    masterPool_username = uDetail.username
+    masterPool_password = uDetail.password
+    masterPool_database = uDetail.path.extractFileName()
+    masterPool_options = decodeQuery(uDetail)
+    #
+    # assign auth method details
+    #
+    if masterPool_username == "":
+      masterPool_authMechanism = "NONE"
+    else:
+      if "authMechanism" in masterPool_options:
+        let mech = masterPool_options["authMechanism"]
+        case mech:
+        of "SCRAM-SHA-1":
+          masterPool_authMechanism = mech
+        of "MONGODB-CR":
+          masterPool_authMechanism = mech
+        else:
+          raise newException(CommunicationError, 
+                             "MongoPool library does not currently support the " &
+                             "$1 authentication mechanism.".format(mech))
+      else:
+        masterPool_authMechanism = "SCRAM-SHA-1"
+      if "authSource" in masterPool_options:
+        masterPool_authDatabase = masterPool_options["authSource"]
+      else:
+        masterPool_authDatabase = masterPool_database
+    if masterPool_authDatabase == "":
+      masterPool_authDatabase = "admin"
+    masterPool_writeConcern = writeConcernDefault()
+    #
+    # establish the minimum connections
+    #
+    masterPool_minConnections = minConnections
+    masterPool_maxConnections = maxConnections
+    masterPool_asockets = initTable[int, AsyncSocket]()
+    masterPool_connStatus = initTable[int, string]()
+    masterPool_available = initDeque[int]()
+    for i in 1..minConnections:
+      addConnection()
+    #
+    # check everything
+    #
+    if masterPool_available.len == 0:
+      raise newException(CommunicationError, "unable to connect to $1".format(url))
+    when compileOption("threads"):
+      if masterThreadId == getThreadId():
+        echo "mongopool ready for threaded use"
 
 
-proc getMongoPoolStatus*(): string =
+
+proc getMongoPoolStatus*(): string {.gcsafe.} =
   ## Returns a string showing the database pool's current state.
+  ##
+  ## An attempt is made to cover any password in the url.
   ##
   ## It appears in the form of:
   ##
   ## .. code::
   ##
-  ##     MongoPool (default):
-  ##       url: mongodb://user:2923829@mongodb.servers.somedomain.com:27017/blahblah
+  ##     mongopool (default):
+  ##       url: mongodb://user:<password>@mongodb.servers.somedomain.com:27017/blahblah
   ##       auth:
   ##         mechanism: SCRAM-SHA-1
   ##         database: blahblah
@@ -878,56 +903,57 @@ proc getMongoPoolStatus*(): string =
   ##         pool size: 4
   ##         working: 4
   ##         available: 4
+  ##         last used: 1
   ##         [1] =   (avail) "Authenticated socket ready."
   ##         [2] =   (avail) "Authenticated socket ready."
   ##         [3] =   (avail) "Authenticated socket ready."
   ##         [4] =   (avail) "Authenticated socket ready."
   ##
-  result = "MongoPool (default):\n"
-  result &= "  url: $1\n".format(masterPool.originalUrl)
-  result &= "  auth:\n"
-  result &= "    mechanism: $1\n".format(masterPool.authMechanism)
-  result &= "    database: $1\n".format(masterPool.authDatabase)
-  result &= "  database: $1\n".format(masterPool.database)
-  result &= "  min max: $1 $2\n".format(masterPool.minConnections, masterPool.maxConnections)
-  result &= "  sockets:\n"
-  result &= "    pool size: $1\n".format(masterPool.asockets.len)
-  result &= "    working: $1\n".format(masterPool.working.len)
-  result &= "    available: $1\n".format(masterPool.available.len)
-  for index, stat in masterPool.connStatus.pairs:
-    var activeStat = "   (dead)"
-    if index in masterPool.working:
-      activeStat = "(working)"
-    if index in masterPool.available:
-      activeStat = "  (avail)"
-    result &= "    [$1] = $2 \"$3\"\n".format(index, activeStat, stat)
+  {.gcsafe.}:
+    var matches: array[3, string]
+    var redactedUrl = masterPool_originalUrl.deepCopy
+    if match(redactedUrl, re"([^/]+//[^:]*:)([^@]+)(@.*)", matches):
+      redactedUrl = matches[0] & "<password>" & matches[2]
+    result = "mongopool (default):\n"
+    result &= "  url: $1\n".format(redactedUrl)
+    result &= "  auth:\n"
+    result &= "    mechanism: $1\n".format(masterPool_authMechanism)
+    result &= "    database: $1\n".format(masterPool_authDatabase)
+    result &= "  database: $1\n".format(masterPool_database)
+    result &= "  min max: $1 $2\n".format(masterPool_minConnections, masterPool_maxConnections)
+    result &= "  sockets:\n"
+    result &= "    pool size: $1\n".format(masterPool_asockets.len)
+    result &= "    working: $1\n".format(masterPool_working.len)
+    result &= "    available: $1\n".format(masterPool_available.len)
+    if len(masterPool_available) == 0:
+      result &= "    last used: detail not available\n"
+    else:
+      result &= "    last used: $1\n".format(masterPool_available.peekLast)
+    for index, stat in masterPool_connStatus.pairs:
+      var activeStat = "   (dead)"
+      if index in masterPool_working:
+        activeStat = "(working)"
+      if index in masterPool_available:
+        activeStat = "  (avail)"
+      result &= "    [$1] = $2 \"$3\"\n".format(index, activeStat, stat)
 
 
-proc getNextFromSpecific(pool: var MongoPool): MongoConnection =
-  if pool.available.len == 0:
-    echo "adding..."
-    addConnection(pool)
-    echo getMongoPoolStatus()
-  let index = pool.available.popFirst
-  result = MongoConnection()
-  result.id = index
-  result.asocket = pool.asockets[index]
-  result.currentDatabase = pool.database
-  result.writeConcern = pool.writeConcern
+proc getNextFromSpecific(): MongoConnection {.gcsafe.} =
+  {.gcsafe.}:
+    if masterPool_available.len == 0:
+      # echo "adding..."
+      addConnection()
+      # echo getMongoPoolStatus()
+    let index = masterPool_available.popFirst
+    result = MongoConnection()
+    result.id = index
+    result.asocket = masterPool_asockets[index]
+    result.currentDatabase = masterPool_database
+    result.writeConcern = masterPool_writeConcern
   
-proc getNextConnection*(): MongoConnection =
-  ## Get a connection from a non-threaded context.
-  ##
-  ## You will want to call 'releaseConnection' when done.
-  ##
-  ## This is mostly used for unit testing and sample code.
-  ##
-  ## Returns a single connection to the database.
-  result = getNextFromSpecific(masterPool)
 
-
-proc getNextConnectionAsThread*(): MongoConnection {.gcsafe.} =
-  ## Get a connection from the MongoDB pool from a threaded context.
+proc getNextConnection*(): MongoConnection {.gcsafe.} =
+  ## Get a connection from the MongoDB pool.
   ##
   ## If the number of available connections runs out, a new connection
   ## is made. (As long as it is still below the 'maxConnections' parameter
@@ -940,27 +966,32 @@ proc getNextConnectionAsThread*(): MongoConnection {.gcsafe.} =
   ## before your thread terminates. Otherwise, the connection will never be
   ## release.
   ##
-  ## Behind the scenes, a special 'threadvar' called 'dbThread' is "instanced"
-  ## for your thread using the thread's own memory management context.
+  ## If you are in the context of a tread, a special threadvar called 
+  ## ``dbThread`` is "instanced" for your thread using the thread's own memory
+  ## management context. Otherwise, a new instance is called.
   ##
   ## Returns a single connection to the database.
-  let temp = getNextFromSpecific(masterPool)
-  dbThread = MongoConnection()
-  dbThread.id = temp.id
-  dbThread.asocket = temp.asocket
-  dbThread.currentDatabase = temp.currentDatabase
-  echo "db conn grabbed ", dbThread.id
-  result = dbThread
-
-
-proc releaseConnectionFromSpecific(pool: var MongoPool, mc: MongoConnection) = 
-  pool.available.addLast(mc.id)
+  
+  when compileOption("threads"):
+    if masterThreadId == getThreadId():
+      # non-threaded response:
+      result = getNextFromSpecific()
+    else:
+      # threaded response:
+      let temp = getNextFromSpecific()
+      dbThread = MongoConnection()
+      dbThread.id = temp.id
+      dbThread.asocket = temp.asocket
+      dbThread.currentDatabase = temp.currentDatabase
+      result = dbThread
+  else:
+    # non-threaded response:
+    result = getNextFromSpecific()
 
 
 proc releaseConnection*(mc: MongoConnection) {.gcsafe.} =
   ## Release a live database connection back to the MongoDB pool.
   ##
   ## This is safe to call from both a threaded and non-threaded context.
-  releaseConnectionFromSpecific(masterPool, mc)
-  echo "db conn released ", mc.id
-  return
+  {.gcsafe.}:
+    masterPool_available.addLast(mc.id)
