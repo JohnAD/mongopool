@@ -10,8 +10,8 @@
 ## A simple pure-nim mongodb pooled client designed for use with threaded
 ## applications such as `Jester <https://github.com/dom96/jester>`__.
 ## 
-## HOW TO USE (UNTHREADED)
-## =======================
+## HOW TO USE
+## ==========
 ## 
 ## 1. Import the library. But, you will also *really* want the `bson <https://github.com/JohnAD/bson>`__
 ##    library as well since you will be using BSON documents.
@@ -48,10 +48,19 @@
 ## HOW TO USE (THREADED)
 ## =====================
 ##
-## The whole point of this library is threaded application use. The biggest
-## change is that the connection is pulled using ``getNextConnectionAsThread``
-## instead of ``getNextConnection``. Of course, that will only work from inside
-## the thread. Here is an example that uses Jester to make a web site:
+## The whole point of this library is threaded application use. Two key things
+## to keep in mind:
+##
+## 1. You must call ``connectMongoPool`` **before** the threading begins.
+##
+## 2. Once inside the thread, you must both call ``getNextConnection`` for the 
+##    next available connection and call ``releaseConnection`` before finishing
+##    the thread.
+##
+## Failing to call ``releaseConnection`` will keep the connection in-use even
+## after the thread closes.
+##
+## Here is an example that uses Jester to make a web site:
 ##
 ## .. code:: nim
 ##
@@ -66,7 +75,7 @@
 ##         #
 ##         # get a connection:
 ##         #
-##         var db = getNextConnectionAsThread()
+##         var db = getNextConnection()
 ##         #
 ##         # doing something with it:
 ##         #
@@ -819,8 +828,12 @@ proc connectMongoPool*(url: string, minConnections = 4, maxConnections = 20) {.g
   ## maxConnections
   ##   determines the maximum allowed *active* connections
   ##
-  ## Behind the scenes, a global variable called ``masterPool`` is created. That
-  ## variable is private to this library.
+  ## Behind the scenes, a set of global variables prefixed with ``masterPool_``
+  ## are set. Those variables are private to the library.
+  ##
+  ## If the compiler is called with ``--threads:on`` this procedure will verify that
+  ## it is not in a running thread. If it is within a running thread, it raises
+  ## an ``OSError`` at run-time.
   #
   # parse the URL
   #
