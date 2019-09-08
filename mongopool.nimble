@@ -5,6 +5,7 @@ author       = "John Dupuy"
 description  = "MongoDB pooled client for threaded applications such as web servers"
 license      = "MIT"
 srcDir       = "src"
+skipExt      = @["rst"]
 
 # Dependencies
 

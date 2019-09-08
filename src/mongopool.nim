@@ -195,8 +195,9 @@
 when hostOs == "linux":
     {.passL: "-pthread".}
 
-import asyncdispatch
-import asyncnet
+# import asyncdispatch
+# import asyncnet
+import net
 import base64
 import locks
 import random
@@ -230,27 +231,10 @@ export errors
 type
   MongoConnection = object
     id: int
-    asocket: AsyncSocket
+    asocket: Socket
     requestId: int32
     currentDatabase: string
     writeConcern: WriteConcern
-  # MongoPool = object
-  #   originalUrl: string
-  #   hostname: string
-  #   port: uint16
-  #   username: string
-  #   password: string
-  #   database: string
-  #   options: Table[string, string]
-  #   authMechanism: string
-  #   authDatabase: string
-  #   asockets: Table[int, AsyncSocket]
-  #   connStatus: Table[int, string]
-  #   working: seq[int]
-  #   available: Deque[int]
-  #   minConnections: int
-  #   maxConnections: int
-  #   writeConcern: WriteConcern
   FindQuery = object     ## MongoDB cursor: manages queries object lazily
     connection: MongoConnection
     requestId: int32
@@ -280,7 +264,7 @@ var
   masterPool_options: Table[string, string]
   masterPool_authMechanism: string
   masterPool_authDatabase: string
-  masterPool_asockets: Table[int, AsyncSocket]
+  masterPool_asockets: Table[int, Socket]
   masterPool_connStatus: Table[int, string]
   masterPool_working: seq[int] = @[]
   masterPool_available: Deque[int]
@@ -387,8 +371,8 @@ proc prepareQuery(f: FindQuery, requestId: int32, numberToReturn: int32, numberT
   result &= sfields
 
 
-proc handleResponses(db: FindQuery, target: Future[seq[Bson]]): Future[void] {.async.} =
-  var data: string = await db.connection.asocket.recv(4)
+proc handleResponses(db: FindQuery, target: var seq[Bson]) =
+  var data: string = db.connection.asocket.recv(4)
   if data == "":
     raise newException(CommunicationError, "Disconnected from MongoDB server")
 
@@ -398,7 +382,7 @@ proc handleResponses(db: FindQuery, target: Future[seq[Bson]]): Future[void] {.a
   ## Read data
   data = ""
   while data.len < messageLength:
-    let chunk: string = await db.connection.asocket.recv(messageLength - data.len)
+    let chunk: string = db.connection.asocket.recv(messageLength - data.len)
     if chunk == "":
       raise newException(CommunicationError, "Disconnected from MongoDB server")
     data &= chunk
@@ -419,30 +403,66 @@ proc handleResponses(db: FindQuery, target: Future[seq[Bson]]): Future[void] {.a
     for i in 0..<numberReturned:
       res.add(newBsonDocument(stream))
   
-  target.complete(res)
+  target = res
 
 
+iterator performFind(f: FindQuery, 
+                     numberToReturn: int32, 
+                     numberToSkip: int32): Bson {.closure.} =
+  ## Private procedure for performing actual query to Mongo
+  if f.connection.asocket.trySend(prepareQuery(f, f.requestId, numberToReturn, numberToSkip)):
+    var data: string = newStringOfCap(4)
+    var received: int = f.connection.asocket.recv(data, 4)
+    var stream: Stream = newStringStream(data)
 
-proc performFindAsync(f: FindQuery,
-                      numberToReturn: int32,
-                      numberToSkip: int32): Future[seq[Bson]] {.async.} =
-  # Perform asynchronous OP_QUERY operation to MongoDB.
-  #
-  await f.connection.asocket.send(prepareQuery(f, f.requestId, numberToReturn, numberToSkip))
-  let response = newFuture[seq[Bson]]("recv")
-  # ls.queue[requestId] = response
-  # if ls.queue.len == 1:
-  #   asyncCheck handleResponses(ls)
-  var ret = response
-  asyncCheck handleResponses(f, ret)
-  result = await response
+    ## Read data
+    let messageLength: int32 = stream.readInt32()
+
+    data = newStringOfCap(messageLength - 4)
+    received = f.connection.asocket.recv(data, messageLength - 4)
+    stream = newStringStream(data)
+
+    discard stream.readInt32()                     ## requestId
+    discard stream.readInt32()                     ## responseTo
+    discard stream.readInt32()                     ## opCode
+    discard stream.readInt32()                     ## responseFlags
+    discard stream.readInt64()                     ## cursorID
+    discard stream.readInt32()                     ## startingFrom
+    let numberReturned: int32 = stream.readInt32() ## numberReturned
+
+    if numberReturned > 0:
+      for i in 0..<numberReturned:
+        yield newBsonDocument(stream)
+    elif numberToReturn == 1:
+      raise newException(NotFound, "No documents matching query were found")
+    else:
+      discard
+
+
+# proc performFind(f: FindQuery,
+#                       numberToReturn: int32,
+#                       numberToSkip: int32): seq[Bson] =
+#   # Perform asynchronous OP_QUERY operation to MongoDB.
+#   #
+#   f.connection.asocket.send(prepareQuery(f, f.requestId, numberToReturn, numberToSkip))
+#   var data = ""
+#   f.connection.asocket.recv(data, 1, timeout=1000)
+
+#   # let response = newFuture[seq[Bson]]("recv")
+#   # # ls.queue[requestId] = response
+#   # # if ls.queue.len == 1:
+#   # #   asyncCheck handleResponses(ls)
+#   # var ret = response
+#   # asyncCheck handleResponses(f, ret)
+#   # result = await response
 
 
 proc returnMany*(f: FindQuery): seq[Bson] =
   ## Executes the query and returns the matching documents.
   ##
   ## Returns a sequence of BSON documents.
-  result = waitFor f.performFindAsync(f.nlimit, f.nskip)
+  for doc in f.performFind(f.nlimit, f.nskip):
+    result.add(doc)
 
 
 proc returnOne*(f: FindQuery): Bson =
@@ -453,10 +473,12 @@ proc returnOne*(f: FindQuery): Bson =
   ## 
   ## Returns a single BSON document. If nothing is found,
   ## it generates a ``NotFound`` error.
-  let docs = waitFor f.performFindAsync(1, f.nskip)
-  if docs.len == 0:
+  var temp: seq[Bson]
+  for doc in f.performFind(1, 0):
+    temp.add(doc)
+  if temp.len == 0:
     raise newException(NotFound, "No documents matching query were found")
-  return docs[0]
+  result = temp[0]
 
 
 proc returnCount*(f: FindQuery): int =
@@ -469,7 +491,9 @@ proc returnCount*(f: FindQuery): int =
   count.query["query"] = f.query["$query"]
   count.query.del("$query")
   count.collectionName = "$cmd"
-  let docs = waitFor count.performFindAsync(1, 0)
+  var docs: seq[Bson]
+  for doc in count.performFind(f.nlimit, f.nskip):
+    docs.add(doc)
   handleStatusReply(docs[0])
   # echo "--"
   # echo count.query
@@ -765,15 +789,17 @@ proc addConnection() {.gcsafe.} =
     #
     # add one more entry
     #
-    masterPool_asockets[next] = newAsyncSocket()
+    masterPool_asockets[next] = newSocket()
     masterPool_connStatus[next] = "pending TCP connect"
     #
     # establish a connection to the server
     #
     try:
-      waitFor masterPool_asockets[next].connect(masterPool_hostname, asyncdispatch.Port(masterPool_port))
+      masterPool_asockets[next].connect(masterPool_hostname, Port(masterPool_port), 1000)
       masterPool_connStatus[next] = "TCP/IP connected"
+      # echo "TCP connect $1".format(next)
     except OSError:
+      echo "warning: failed TCP connect $1".format(next)
       masterPool_connStatus[next] = "failed basic TCP/IP connection"
       sleep(400)
       return
@@ -800,8 +826,11 @@ proc addConnection() {.gcsafe.} =
       if authResult:
         masterPool_available.addLast(next) # only add it if the connection works
         masterPool_working.add next
+      else:
+        echo "warning: failed AUTHRESULT on connection $1".format(next)
     except:
       echo getCurrentExceptionMsg()
+      echo "warning: failed AUTH on connection $1".format(next)
       sleep(200)
       return
 
@@ -881,7 +910,7 @@ proc connectMongoPool*(url: string, minConnections = 4, maxConnections = 20) {.g
     #
     masterPool_minConnections = minConnections
     masterPool_maxConnections = maxConnections
-    masterPool_asockets = initTable[int, AsyncSocket]()
+    masterPool_asockets = initTable[int, Socket]()
     masterPool_connStatus = initTable[int, string]()
     masterPool_available = initDeque[int]()
     for i in 1..minConnections:
@@ -992,12 +1021,14 @@ proc getNextConnection*(): MongoConnection {.gcsafe.} =
       result = getNextFromSpecific()
     else:
       # threaded response:
-      let temp = getNextFromSpecific()
-      dbThread = MongoConnection()
-      dbThread.id = temp.id
-      dbThread.asocket = temp.asocket
-      dbThread.currentDatabase = temp.currentDatabase
-      result = dbThread
+      {.gcsafe.}:
+        let temp = getNextFromSpecific()
+        dbThread = MongoConnection()
+        dbThread.id = temp.id.deepCopy
+        dbThread.asocket = masterPool_asockets[temp.id]
+        dbThread.currentDatabase = masterPool_database.deepCopy
+        dbThread.writeConcern = masterPool_writeConcern.deepCopy
+        return dbThread
   else:
     # non-threaded response:
     result = getNextFromSpecific()
