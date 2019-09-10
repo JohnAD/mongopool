@@ -24,6 +24,20 @@ CommunicationError
     Raises on communication problems with MongoDB server
 
 
+.. _MongoPoolCapacityReached.type:
+MongoPoolCapacityReached
+---------------------------------------------------------
+
+    .. code:: nim
+
+        MongoPoolCapacityReached* = object of MongoPoolError
+
+
+    source line: `11 <../src/mongopool/errors.nim#L11>`__
+
+    Raises when querying of one documents returns empty result
+
+
 .. _MongoPoolError.type:
 MongoPoolError
 ---------------------------------------------------------
@@ -61,7 +75,7 @@ ReplyFieldMissing
         ReplyFieldMissing* = object of MongoPoolError
 
 
-    source line: `11 <../src/mongopool/errors.nim#L11>`__
+    source line: `14 <../src/mongopool/errors.nim#L14>`__
 
     Raises when reqired field in reply is missing
 

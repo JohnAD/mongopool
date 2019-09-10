@@ -169,7 +169,7 @@
 ##
 ## related functions: 
 ## `replaceOne <https://github.com/JohnAD/mongopool/blob/master/docs/mongopool-ref.rst#replaceone>`__, 
-## `deleteOne <https://github.com/JohnAD/mongopool/blob/master/docs/mongopool-ref.rst#deleteone>`__
+## `updateMany <https://github.com/JohnAD/mongopool/blob/master/docs/mongopool-ref.rst#updatemany>`__
 ##
 ## DELETE
 ## ------
@@ -590,7 +590,7 @@ proc replaceOne*(db: var MongoConnection, collection: string, filter: Bson, repl
   ## Replace one MongoDB document.
   ##
   ## See
-  ## https://docs.mongodb.com/manual/reference/method/db.collection.updateOne/
+  ## https://docs.mongodb.com/manual/reference/method/db.collection.replaceOne/
   ## for more details.
   ##
   ## collection 
@@ -803,6 +803,11 @@ proc addConnection() {.gcsafe.} =
       masterPool_connStatus[next] = "failed basic TCP/IP connection"
       sleep(400)
       return
+    except TimeoutError:
+      echo "warning: timeout on connect $1".format(next)
+      masterPool_connStatus[next] = "timeout on TCP/IP connection"
+      sleep(400)
+      return
     #
     # now authenticate the connection
     #
@@ -854,7 +859,7 @@ proc connectMongoPool*(url: string, minConnections = 4, maxConnections = 20) {.g
   ## url
   ##   url of the MongoDB server to connect to
   ## minConnections 
-  ##   determines the number database connections to start with
+  ##   determines the number of database connections to start with
   ## maxConnections
   ##   determines the maximum allowed *active* connections
   ##
@@ -925,7 +930,6 @@ proc connectMongoPool*(url: string, minConnections = 4, maxConnections = 20) {.g
         echo "mongopool ready for threaded use"
 
 
-
 proc getMongoPoolStatus*(): string {.gcsafe.} =
   ## Returns a string showing the database pool's current state.
   ##
@@ -984,9 +988,9 @@ proc getMongoPoolStatus*(): string {.gcsafe.} =
 proc getNextFromSpecific(): MongoConnection {.gcsafe.} =
   {.gcsafe.}:
     if masterPool_available.len == 0:
-      # echo "adding..."
+      if masterPool_asockets.len >= masterPool_maxConnections:
+        raise newException(MongoPoolCapacityReached, "Out of capacity -- reached max connections ($1)".format(masterPool_maxConnections))
       addConnection()
-      # echo getMongoPoolStatus()
     let index = masterPool_available.popFirst
     result = MongoConnection()
     result.id = index

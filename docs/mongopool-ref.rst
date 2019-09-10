@@ -39,7 +39,7 @@ connectMongoPool
 
         proc connectMongoPool*(url: string, minConnections = 4, maxConnections = 20) {.gcsafe.} =
 
-    source line: `838 <../src/mongopool.nim#L838>`__
+    source line: `843 <../src/mongopool.nim#L843>`__
 
     This procedure connects to the MongoDB database using the supplied
     `url` string. That URL should be in the form of:
@@ -59,7 +59,7 @@ connectMongoPool
     url
       url of the MongoDB server to connect to
     minConnections
-      determines the number database connections to start with
+      determines the number of database connections to start with
     maxConnections
       determines the maximum allowed *active* connections
     
@@ -178,7 +178,7 @@ getMongoPoolStatus
 
         proc getMongoPoolStatus*(): string {.gcsafe.} =
 
-    source line: `929 <../src/mongopool.nim#L929>`__
+    source line: `933 <../src/mongopool.nim#L933>`__
 
     Returns a string showing the database pool's current state.
     
@@ -215,7 +215,7 @@ getNextConnection
 
         proc getNextConnection*(): MongoConnection {.gcsafe.} =
 
-    source line: `998 <../src/mongopool.nim#L998>`__
+    source line: `1002 <../src/mongopool.nim#L1002>`__
 
     Get a connection from the MongoDB pool.
     
@@ -308,7 +308,7 @@ releaseConnection
 
         proc releaseConnection*(mc: MongoConnection) {.gcsafe.} =
 
-    source line: `1037 <../src/mongopool.nim#L1037>`__
+    source line: `1041 <../src/mongopool.nim#L1041>`__
 
     Release a live database connection back to the MongoDB pool.
     
@@ -328,7 +328,7 @@ replaceOne
     Replace one MongoDB document.
     
     See
-    https://docs.mongodb.com/manual/reference/method/db.collection.updateOne/
+    https://docs.mongodb.com/manual/reference/method/db.collection.replaceOne/
     for more details.
     
     collection

@@ -166,7 +166,7 @@ UPDATE
 
 related functions:
 `replaceOne <https://github.com/JohnAD/mongopool/blob/master/docs/mongopool-ref.rst#replaceone>`__,
-`deleteOne <https://github.com/JohnAD/mongopool/blob/master/docs/mongopool-ref.rst#deleteone>`__
+`updateMany <https://github.com/JohnAD/mongopool/blob/master/docs/mongopool-ref.rst#updatemany>`__
 
 DELETE
 ------
