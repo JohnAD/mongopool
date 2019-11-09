@@ -9,7 +9,7 @@ type
   ## Raises when querying of one documents returns empty result
 
   MongoPoolCapacityReached* = object of MongoPoolError
-  ## Raises when querying of one documents returns empty result
+  ## Raises when maximum connection capacity reached (see maxConnections)
 
   ReplyFieldMissing* = object of MongoPoolError
   ## Raises when reqired field in reply is missing

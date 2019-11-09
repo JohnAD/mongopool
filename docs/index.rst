@@ -1,6 +1,6 @@
 Introduction to mongopool
 ==============================================================================
-ver 0.1.0
+ver 1.0.0
 
 #########################################
 #########################################
@@ -187,12 +187,27 @@ related functions:
 `deleteMany <https://github.com/JohnAD/mongopool/blob/master/docs/mongopool-ref.rst#deletemany>`__,
 `deleteOne <https://github.com/JohnAD/mongopool/blob/master/docs/mongopool-ref.rst#deleteone>`__
 
+Credit
+======
+
+Large portions of this code were pulled from the nimongo project, a scalable
+pure-nim MongoDb. See `https://github.com/SSPkrolik/nimongo`__
+
+If you are doing batch processing or internally-asynchronous manipulation of
+MongoDb, I recommend using using nimongo rather than this library. nimongo can
+be a very powerful tool.
+
+On the other hand, if you are using MongoDB from an application that is
+already doing it's own asynchronous threading and you need a driver that does
+NOT thread, but is instead friendly to already-existing threads with pooling,
+then this might be the better library.
+
 
 
 Table Of Contents
 =================
 
-1. `Introduction to mongopool <index.rst>`__
+1. `Introduction to mongopool <https://github.com/JohnAD/mongopool>`__
 2. Appendices
 
     A. `mongopool Reference <mongopool-ref.rst>`__

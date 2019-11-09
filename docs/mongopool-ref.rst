@@ -20,7 +20,7 @@ changeDatabase
 
         proc changeDatabase*(db: var MongoConnection, database: string) =
 
-    source line: `683 <../src/mongopool.nim#L683>`__
+    source line: `715 <../src/mongopool.nim#L715>`__
 
     Change the current connection to use a different database than the
     one specified in the connection URL. This is rarely approved
@@ -37,9 +37,9 @@ connectMongoPool
 
     .. code:: nim
 
-        proc connectMongoPool*(url: string, minConnections = 4, maxConnections = 20) {.gcsafe.} =
+        proc connectMongoPool*(url: string, minConnections = 4, maxConnections = 20, loose=false) {.gcsafe.} =
 
-    source line: `843 <../src/mongopool.nim#L843>`__
+    source line: `875 <../src/mongopool.nim#L875>`__
 
     This procedure connects to the MongoDB database using the supplied
     `url` string. That URL should be in the form of:
@@ -62,6 +62,8 @@ connectMongoPool
       determines the number of database connections to start with
     maxConnections
       determines the maximum allowed *active* connections
+    loose
+      if ``true`` then the connection need not be successful.
     
     Behind the scenes, a set of global variables prefixed with ``masterPool_``
     are set. Those variables are private to the library.
@@ -79,7 +81,7 @@ deleteMany
 
         proc deleteMany*(db: var MongoConnection, collection: string, filter: Bson, limit: int = 0, writeConcern: Bson = nil): int =
 
-    source line: `621 <../src/mongopool.nim#L621>`__
+    source line: `653 <../src/mongopool.nim#L653>`__
 
     Deletes multiple MongoDB documents.
     
@@ -107,7 +109,7 @@ deleteOne
 
         proc deleteOne*(db: var MongoConnection, collection: string, filter: Bson, writeConcern: Bson = nil): int =
 
-    source line: `649 <../src/mongopool.nim#L649>`__
+    source line: `681 <../src/mongopool.nim#L681>`__
 
     Deletes one MongoDB document.
     
@@ -129,6 +131,29 @@ deleteOne
     Returns the number of documents deleted, which will be 1.
 
 
+.. _drop.p:
+drop
+---------------------------------------------------------
+
+    .. code:: nim
+
+        proc drop*(db: var MongoConnection, collection: string, writeConcern: Bson = nil): bool =
+
+    source line: `513 <../src/mongopool.nim#L513>`__
+
+    Drops (removes) a collection from the current database.
+    
+    This also deletes all documents found in that collection. Use with caution.
+    
+    To create a collection, simply use it. Any inserted document will create the
+    collection if it does not already exist.
+    
+    collection
+      the collection to be dropped
+    
+    Returns true if the collection was successfully dropped. Otherwise returns false.
+
+
 .. _find.p:
 find
 ---------------------------------------------------------
@@ -137,7 +162,7 @@ find
 
         proc find*(db: var MongoConnection, collection: string, criteria: Bson = @@{}, fields: seq[string] = @[]): FindQuery =
 
-    source line: `336 <../src/mongopool.nim#L336>`__
+    source line: `363 <../src/mongopool.nim#L363>`__
 
     Starts a query to find documents in the database.
     
@@ -161,7 +186,7 @@ getDatabase
 
         proc getDatabase*(db: var MongoConnection): string =
 
-    source line: `674 <../src/mongopool.nim#L674>`__
+    source line: `706 <../src/mongopool.nim#L706>`__
 
     Get the current database name associated with this connection.
     This starts out as the database referenced in the connection URL,
@@ -178,7 +203,7 @@ getMongoPoolStatus
 
         proc getMongoPoolStatus*(): string {.gcsafe.} =
 
-    source line: `933 <../src/mongopool.nim#L933>`__
+    source line: `968 <../src/mongopool.nim#L968>`__
 
     Returns a string showing the database pool's current state.
     
@@ -215,18 +240,19 @@ getNextConnection
 
         proc getNextConnection*(): MongoConnection {.gcsafe.} =
 
-    source line: `1002 <../src/mongopool.nim#L1002>`__
+    source line: `1034 <../src/mongopool.nim#L1034>`__
 
     Get a connection from the MongoDB pool.
     
     If the number of available connections runs out, a new connection
-    is made. (As long as it is still below the 'maxConnections' parameter
-    used when the pool was created.)
+    is made. However, if the number of connections has
+    reached the ``maxConnections`` parameter from ``connectMongoPool``,
+    then the ``MongoPoolCapacityReached`` error is raised instead.
     
     When a thread has spawned, the code in the thread can safely get
-    one of the pre-authenticated establlished connections from the pool.
+    one of the pre-authenticated established connections from the pool.
     
-    You will want to call 'releaseConnection' with the connection
+    You will want to call ``releaseConnection`` with the connection
     before your thread terminates. Otherwise, the connection will never be
     release.
     
@@ -245,7 +271,7 @@ insertMany
 
         proc insertMany*(db: var MongoConnection, collection: string, documents: seq[Bson], ordered: bool = true, writeConcern: Bson = nil): seq[Bson] =
 
-    source line: `504 <../src/mongopool.nim#L504>`__
+    source line: `536 <../src/mongopool.nim#L536>`__
 
     Insert new documents into MongoDB.
     
@@ -271,7 +297,7 @@ insertOne
 
         proc insertOne*(db: var MongoConnection, collection: string, document: Bson, ordered: bool = true, writeConcern: Bson = nil): Bson =
 
-    source line: `545 <../src/mongopool.nim#L545>`__
+    source line: `577 <../src/mongopool.nim#L577>`__
 
     Insert one new document into MongoDB
     
@@ -293,7 +319,7 @@ limit
 
         proc limit*(f: FindQuery, numLimit: int32): FindQuery =
 
-    source line: `328 <../src/mongopool.nim#L328>`__
+    source line: `355 <../src/mongopool.nim#L355>`__
 
     Limits the number of documents the query will return
     
@@ -308,7 +334,7 @@ releaseConnection
 
         proc releaseConnection*(mc: MongoConnection) {.gcsafe.} =
 
-    source line: `1041 <../src/mongopool.nim#L1041>`__
+    source line: `1074 <../src/mongopool.nim#L1074>`__
 
     Release a live database connection back to the MongoDB pool.
     
@@ -323,7 +349,7 @@ replaceOne
 
         proc replaceOne*(db: var MongoConnection, collection: string, filter: Bson, replacement: Bson, upsert = false): int =
 
-    source line: `589 <../src/mongopool.nim#L589>`__
+    source line: `621 <../src/mongopool.nim#L621>`__
 
     Replace one MongoDB document.
     
@@ -356,7 +382,7 @@ returnCount
 
         proc returnCount*(f: FindQuery): int =
 
-    source line: `484 <../src/mongopool.nim#L484>`__
+    source line: `493 <../src/mongopool.nim#L493>`__
 
     Executes the query and returns the count of documents found
     (rather than the documents themselves).
@@ -372,7 +398,7 @@ returnMany
 
         proc returnMany*(f: FindQuery): seq[Bson] =
 
-    source line: `460 <../src/mongopool.nim#L460>`__
+    source line: `469 <../src/mongopool.nim#L469>`__
 
     Executes the query and returns the matching documents.
     
@@ -387,7 +413,7 @@ returnOne
 
         proc returnOne*(f: FindQuery): Bson =
 
-    source line: `468 <../src/mongopool.nim#L468>`__
+    source line: `477 <../src/mongopool.nim#L477>`__
 
     Executes the query and returns the first document.
     
@@ -406,7 +432,7 @@ skip
 
         proc skip*(f: FindQuery, numSkip: int32): FindQuery =
 
-    source line: `319 <../src/mongopool.nim#L319>`__
+    source line: `346 <../src/mongopool.nim#L346>`__
 
     For a query returning multiple documents, this specifies
     how many should be skipped first.
@@ -422,7 +448,7 @@ sort
 
         proc sort*(f: FindQuery, order: Bson): FindQuery =
 
-    source line: `305 <../src/mongopool.nim#L305>`__
+    source line: `332 <../src/mongopool.nim#L332>`__
 
     Add sorting criteria to a query.
     
@@ -443,7 +469,7 @@ updateMany
 
         proc updateMany*(db: var MongoConnection, collection: string, filter: Bson, update: Bson): int =
 
-    source line: `560 <../src/mongopool.nim#L560>`__
+    source line: `592 <../src/mongopool.nim#L592>`__
 
     Update multiple MongoDB documents.
     
@@ -472,7 +498,7 @@ updateMany
 Table Of Contents
 =================
 
-1. `Introduction to mongopool <index.rst>`__
+1. `Introduction to mongopool <https://github.com/JohnAD/mongopool>`__
 2. Appendices
 
     A. `mongopool Reference <mongopool-ref.rst>`__

@@ -35,7 +35,7 @@ MongoPoolCapacityReached
 
     source line: `11 <../src/mongopool/errors.nim#L11>`__
 
-    Raises when querying of one documents returns empty result
+    Raises when maximum connection capacity reached (see maxConnections)
 
 
 .. _MongoPoolError.type:
@@ -91,7 +91,7 @@ ReplyFieldMissing
 Table Of Contents
 =================
 
-1. `Introduction to mongopool <index.rst>`__
+1. `Introduction to mongopool <https://github.com/JohnAD/mongopool>`__
 2. Appendices
 
     A. `mongopool Reference <mongopool-ref.rst>`__

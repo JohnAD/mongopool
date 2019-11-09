@@ -1,11 +1,11 @@
 import bson
 import errors
 
-type StatusReply = object  ## Database Reply
-    ok: bool
-    n: int
-    err: string
-    bson: Bson
+type StatusReply* = object  ## Database Reply
+    ok*: bool
+    n*: int
+    err*: string
+    bson*: Bson
 
 template parseReplyField(b: untyped, field: untyped, default: untyped, body: untyped): untyped =
   ## Take field from BSON. If field is missing and required than generate

@@ -189,7 +189,21 @@
 ## related functions: 
 ## `deleteMany <https://github.com/JohnAD/mongopool/blob/master/docs/mongopool-ref.rst#deletemany>`__, 
 ## `deleteOne <https://github.com/JohnAD/mongopool/blob/master/docs/mongopool-ref.rst#deleteone>`__
-
+##
+## Credit
+## ======
+##
+## Large portions of this code were pulled from the nimongo project, a scalable
+## pure-nim MongoDb. See `https://github.com/SSPkrolik/nimongo`__
+##
+## If you are doing batch processing or internally-asynchronous manipulation of
+## MongoDb, I recommend using using nimongo rather than this library. nimongo can
+## be a very powerful tool.
+##
+## On the other hand, if you are using MongoDB from an application that is
+## already doing it's own asynchronous threading and you need a driver that does
+## NOT thread, but is instead friendly to already-existing threads with pooling,
+## then this might be the better library.
 
 # Required for using _Lock on linux
 when hostOs == "linux":
@@ -281,6 +295,14 @@ when compileOption("threads"):
 # supporting procedures
 #
 
+proc obscure(url: string): string =
+  var matches: array[3, string]
+  if match(url, re"([^/]+//[^:]*:)([^@]+)(@.*)", matches):
+    result = matches[0] & "<password>" & matches[2]
+  else:
+    result = url.deepCopy
+
+
 proc nextRequestId(mc: var MongoConnection): int32 =
     # Return next request id for current MongoDB client
     mc.requestId = (mc.requestId + 1) mod (int32.high - 1'i32)
@@ -300,6 +322,11 @@ proc makeQuery(c: var MongoConnection, collection: string, query: Bson, fields: 
   result.nskip = 0
   result.nlimit = 0
   result.writeConcern = c.writeConcern
+
+
+#
+# primary procedures
+#
 
 
 proc sort*(f: FindQuery, order: Bson): FindQuery =
@@ -439,24 +466,6 @@ iterator performFind(f: FindQuery,
       discard
 
 
-# proc performFind(f: FindQuery,
-#                       numberToReturn: int32,
-#                       numberToSkip: int32): seq[Bson] =
-#   # Perform asynchronous OP_QUERY operation to MongoDB.
-#   #
-#   f.connection.asocket.send(prepareQuery(f, f.requestId, numberToReturn, numberToSkip))
-#   var data = ""
-#   f.connection.asocket.recv(data, 1, timeout=1000)
-
-#   # let response = newFuture[seq[Bson]]("recv")
-#   # # ls.queue[requestId] = response
-#   # # if ls.queue.len == 1:
-#   # #   asyncCheck handleResponses(ls)
-#   # var ret = response
-#   # asyncCheck handleResponses(f, ret)
-#   # result = await response
-
-
 proc returnMany*(f: FindQuery): seq[Bson] =
   ## Executes the query and returns the matching documents.
   ##
@@ -499,6 +508,29 @@ proc returnCount*(f: FindQuery): int =
   # echo count.query
   # echo docs[0]
   return docs[0].getReplyN
+
+
+proc drop*(db: var MongoConnection, collection: string, writeConcern: Bson = nil): bool =
+  ## Drops (removes) a collection from the current database.
+  ##
+  ## This also deletes all documents found in that collection. Use with caution.
+  ##
+  ## To create a collection, simply use it. Any inserted document will create the
+  ## collection if it does not already exist.
+  ##
+  ## collection
+  ##   the collection to be dropped
+  ##
+  ## Returns true if the collection was successfully dropped. Otherwise returns false.
+  result = false
+  let request = @@{
+    "drop": collection,
+    "writeConcern": if writeConcern == nil.Bson: db.writeConcern else: writeConcern
+  }
+  var query = makeQuery(db, "$cmd", request)
+  var response = query.returnOne()
+  let tsr = toStatusReply(response)
+  result = tsr.ok
 
 
 proc insertMany*(db: var MongoConnection, collection: string, documents: seq[Bson], ordered: bool = true, writeConcern: Bson = nil): seq[Bson] =
@@ -799,12 +831,12 @@ proc addConnection() {.gcsafe.} =
       masterPool_connStatus[next] = "TCP/IP connected"
       # echo "TCP connect $1".format(next)
     except OSError:
-      echo "warning: failed TCP connect $1".format(next)
+      echo "warning: mongopool failed TCP connect $1".format(next)
       masterPool_connStatus[next] = "failed basic TCP/IP connection"
       sleep(400)
       return
     except TimeoutError:
-      echo "warning: timeout on connect $1".format(next)
+      echo "warning: mongopool timeout on connect $1".format(next)
       masterPool_connStatus[next] = "timeout on TCP/IP connection"
       sleep(400)
       return
@@ -840,7 +872,7 @@ proc addConnection() {.gcsafe.} =
       return
 
 
-proc connectMongoPool*(url: string, minConnections = 4, maxConnections = 20) {.gcsafe.} =
+proc connectMongoPool*(url: string, minConnections = 4, maxConnections = 20, loose=false) {.gcsafe.} =
   ## This procedure connects to the MongoDB database using the supplied
   ## `url` string. That URL should be in the form of:
   ## 
@@ -862,6 +894,8 @@ proc connectMongoPool*(url: string, minConnections = 4, maxConnections = 20) {.g
   ##   determines the number of database connections to start with
   ## maxConnections
   ##   determines the maximum allowed *active* connections
+  ## loose
+  ##   if ``true`` then the connection need not be successful.
   ##
   ## Behind the scenes, a set of global variables prefixed with ``masterPool_``
   ## are set. Those variables are private to the library.
@@ -924,7 +958,8 @@ proc connectMongoPool*(url: string, minConnections = 4, maxConnections = 20) {.g
     # check everything
     #
     if masterPool_available.len == 0:
-      raise newException(CommunicationError, "unable to connect to $1".format(url))
+      if not loose:
+        raise newException(CommunicationError, "unable to connect to $1".format(url.obscure))
     when compileOption("threads"):
       if masterThreadId == getThreadId():
         echo "mongopool ready for threaded use"
@@ -957,10 +992,7 @@ proc getMongoPoolStatus*(): string {.gcsafe.} =
   ##         [4] =   (avail) "Authenticated socket ready."
   ##
   {.gcsafe.}:
-    var matches: array[3, string]
-    var redactedUrl = masterPool_originalUrl.deepCopy
-    if match(redactedUrl, re"([^/]+//[^:]*:)([^@]+)(@.*)", matches):
-      redactedUrl = matches[0] & "<password>" & matches[2]
+    let redactedUrl = masterPool_originalUrl.obscure
     result = "mongopool (default):\n"
     result &= "  url: $1\n".format(redactedUrl)
     result &= "  auth:\n"
@@ -987,7 +1019,7 @@ proc getMongoPoolStatus*(): string {.gcsafe.} =
 
 proc getNextFromSpecific(): MongoConnection {.gcsafe.} =
   {.gcsafe.}:
-    if masterPool_available.len == 0:
+    while masterPool_available.len == 0:
       if masterPool_asockets.len >= masterPool_maxConnections:
         raise newException(MongoPoolCapacityReached, "Out of capacity -- reached max connections ($1)".format(masterPool_maxConnections))
       addConnection()
@@ -1003,13 +1035,14 @@ proc getNextConnection*(): MongoConnection {.gcsafe.} =
   ## Get a connection from the MongoDB pool.
   ##
   ## If the number of available connections runs out, a new connection
-  ## is made. (As long as it is still below the 'maxConnections' parameter
-  ## used when the pool was created.)
+  ## is made. However, if the number of connections has
+  ## reached the ``maxConnections`` parameter from ``connectMongoPool``,
+  ## then the ``MongoPoolCapacityReached`` error is raised instead.
   ##
   ## When a thread has spawned, the code in the thread can safely get
-  ## one of the pre-authenticated establlished connections from the pool.
+  ## one of the pre-authenticated established connections from the pool.
   ## 
-  ## You will want to call 'releaseConnection' with the connection
+  ## You will want to call ``releaseConnection`` with the connection
   ## before your thread terminates. Otherwise, the connection will never be
   ## release.
   ##
