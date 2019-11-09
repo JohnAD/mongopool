@@ -194,7 +194,7 @@
 ## ======
 ##
 ## Large portions of this code were pulled from the nimongo project, a scalable
-## pure-nim MongoDb. See `https://github.com/SSPkrolik/nimongo`__
+## pure-nim MongoDb. See https://github.com/SSPkrolik/nimongo
 ##
 ## If you are doing batch processing or internally-asynchronous manipulation of
 ## MongoDb, I recommend using using nimongo rather than this library. nimongo can
