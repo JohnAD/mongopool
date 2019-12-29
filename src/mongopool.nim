@@ -766,8 +766,12 @@ proc authScramSha1(db: var MongoConnection): bool =
     "autoAuthorize": 1'i32
   }
   var query = db.makeQuery("$cmd", requestStart)
-  let responseStart = query.returnOne()
-  if isNil(responseStart) or not isNil(responseStart["code"]):
+  var responseStart: Bson
+  try:
+    responseStart = query.returnOne()
+  except NotFound:
+    return false
+  if responseStart.contains("code"):
     return false #connect failed or auth failure
   #
   # send MD5'd credentials
