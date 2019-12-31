@@ -12,8 +12,8 @@ template parseReplyField(b: untyped, field: untyped, default: untyped, body: unt
   ## "ReplyFieldMissing" exception. If field is missing and not required
   ## than apply provided default value. If field exists than apply provided
   ## calculations body code.
-  let b = reply[field]
-  if b == nil.Bson:
+  let b = reply{field}
+  if b.isNull:
     if isRequired:
       raise newException(ReplyFieldMissing, "Required field \"" & field & "\" missing in reply")
     else:
@@ -90,7 +90,7 @@ template handleStatusReply*(reply: untyped) =
 template handleWriteErrors*(reply: untyped) =
   let n = parseReplyN(reply, true)
   if n==0:
-    let b = reply["writeErrors"]
-    if b != nil.Bson:
+    let b = reply{"writeErrors"}
+    if not b.isNull:
       let err = b[0]["errmsg"]
       raise newException(CommunicationError, err)

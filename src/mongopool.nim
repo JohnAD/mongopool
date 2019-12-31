@@ -510,7 +510,7 @@ proc returnCount*(f: FindQuery): int =
   return docs[0].getReplyN
 
 
-proc drop*(db: var MongoConnection, collection: string, writeConcern: Bson = nil): bool =
+proc drop*(db: var MongoConnection, collection: string, writeConcern: Bson = null()): bool =
   ## Drops (removes) a collection from the current database.
   ##
   ## This also deletes all documents found in that collection. Use with caution.
@@ -525,7 +525,7 @@ proc drop*(db: var MongoConnection, collection: string, writeConcern: Bson = nil
   result = false
   let request = @@{
     "drop": collection,
-    "writeConcern": if writeConcern == nil.Bson: db.writeConcern else: writeConcern
+    "writeConcern": if writeConcern.isNull: db.writeConcern else: writeConcern
   }
   var query = makeQuery(db, "$cmd", request)
   var response = query.returnOne()
@@ -533,7 +533,7 @@ proc drop*(db: var MongoConnection, collection: string, writeConcern: Bson = nil
   result = tsr.ok
 
 
-proc insertMany*(db: var MongoConnection, collection: string, documents: seq[Bson], ordered: bool = true, writeConcern: Bson = nil): seq[Bson] =
+proc insertMany*(db: var MongoConnection, collection: string, documents: seq[Bson], ordered: bool = true, writeConcern: Bson = null()): seq[Bson] =
   ## Insert new documents into MongoDB.
   ##
   ## If problems prevent the insertion, an error is generated.
@@ -566,7 +566,7 @@ proc insertMany*(db: var MongoConnection, collection: string, documents: seq[Bso
     "insert": collection,
     "documents": final_docs,
     "ordered": ordered,
-    "writeConcern": if writeConcern == nil.Bson: db.writeConcern else: writeConcern
+    "writeConcern": if writeConcern.isNull: db.writeConcern else: writeConcern
   }
   var query = makeQuery(db, "$cmd", request)
   var response = query.returnOne()
@@ -574,7 +574,7 @@ proc insertMany*(db: var MongoConnection, collection: string, documents: seq[Bso
   result = final_docs
 
 
-proc insertOne*(db: var MongoConnection, collection: string, document: Bson, ordered: bool = true, writeConcern: Bson = nil): Bson =
+proc insertOne*(db: var MongoConnection, collection: string, document: Bson, ordered: bool = true, writeConcern: Bson = null()): Bson =
   ## Insert one new document into MongoDB
   ##
   ## Returns the newly inserted document, including an _id field if auto-created.
@@ -650,7 +650,7 @@ proc replaceOne*(db: var MongoConnection, collection: string, filter: Bson, repl
   handleWriteErrors(response)
   result = response.getReplyN
 
-proc deleteMany*(db: var MongoConnection, collection: string, filter: Bson, limit: int = 0, writeConcern: Bson = nil): int =
+proc deleteMany*(db: var MongoConnection, collection: string, filter: Bson, limit: int = 0, writeConcern: Bson = null()): int =
   ## Deletes multiple MongoDB documents.
   ##
   ## See:
@@ -671,14 +671,14 @@ proc deleteMany*(db: var MongoConnection, collection: string, filter: Bson, limi
     request = @@{
       "delete": collection,
       "deletes": [@@{"q": filter, "limit": limit}],
-      "writeConcern": if writeConcern == nil.Bson: db.writeConcern else: writeConcern
+      "writeConcern": if writeConcern.isNull: db.writeConcern else: writeConcern
     }
     response = makeQuery(db, "$cmd", request).returnOne()
   handleStatusReply(response)
   return response.getReplyN
 
 
-proc deleteOne*(db: var MongoConnection, collection: string, filter: Bson, writeConcern: Bson = nil): int =
+proc deleteOne*(db: var MongoConnection, collection: string, filter: Bson, writeConcern: Bson = null()): int =
   ## Deletes one MongoDB document.
   ##
   ## See:
@@ -769,7 +769,7 @@ proc authScramSha1(db: var MongoConnection): bool =
   var responseStart: Bson
   try:
     responseStart = query.returnOne()
-  except NotFound:
+  except:
     return false
   if responseStart.contains("code"):
     return false #connect failed or auth failure
