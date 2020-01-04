@@ -1,6 +1,6 @@
 Introduction to mongopool
 ==============================================================================
-ver 1.0.0
+ver 1.0.1
 
 .. image:: https://raw.githubusercontent.com/yglukhov/nimble-tag/master/nimble.png
    :height: 34

@@ -5,6 +5,30 @@ The following are the references for mongopool.
 
 
 
+Types
+=====
+
+
+
+.. _MongoConnection.type:
+MongoConnection
+---------------------------------------------------------
+
+    .. code:: nim
+
+        MongoConnection* = object
+          id: int
+          asocket: Socket
+          requestId: int32
+          currentDatabase: string
+          writeConcern: WriteConcern
+
+
+    source line: `246 <../src/mongopool.nim#L246>`__
+
+
+
+
 
 
 
@@ -37,9 +61,9 @@ connectMongoPool
 
     .. code:: nim
 
-        proc connectMongoPool*(url: string, minConnections = 4, maxConnections = 20, loose=false) {.gcsafe.} =
+        proc connectMongoPool*(url: string, minConnections = 4, maxConnections = 20, loose=true) {.gcsafe.} =
 
-    source line: `875 <../src/mongopool.nim#L875>`__
+    source line: `879 <../src/mongopool.nim#L879>`__
 
     This procedure connects to the MongoDB database using the supplied
     `url` string. That URL should be in the form of:
@@ -79,7 +103,7 @@ deleteMany
 
     .. code:: nim
 
-        proc deleteMany*(db: var MongoConnection, collection: string, filter: Bson, limit: int = 0, writeConcern: Bson = nil): int =
+        proc deleteMany*(db: var MongoConnection, collection: string, filter: Bson, limit: int = 0, writeConcern: Bson = null()): int =
 
     source line: `653 <../src/mongopool.nim#L653>`__
 
@@ -107,7 +131,7 @@ deleteOne
 
     .. code:: nim
 
-        proc deleteOne*(db: var MongoConnection, collection: string, filter: Bson, writeConcern: Bson = nil): int =
+        proc deleteOne*(db: var MongoConnection, collection: string, filter: Bson, writeConcern: Bson = null()): int =
 
     source line: `681 <../src/mongopool.nim#L681>`__
 
@@ -137,7 +161,7 @@ drop
 
     .. code:: nim
 
-        proc drop*(db: var MongoConnection, collection: string, writeConcern: Bson = nil): bool =
+        proc drop*(db: var MongoConnection, collection: string, writeConcern: Bson = null()): bool =
 
     source line: `513 <../src/mongopool.nim#L513>`__
 
@@ -203,7 +227,7 @@ getMongoPoolStatus
 
         proc getMongoPoolStatus*(): string {.gcsafe.} =
 
-    source line: `968 <../src/mongopool.nim#L968>`__
+    source line: `972 <../src/mongopool.nim#L972>`__
 
     Returns a string showing the database pool's current state.
     
@@ -240,7 +264,7 @@ getNextConnection
 
         proc getNextConnection*(): MongoConnection {.gcsafe.} =
 
-    source line: `1034 <../src/mongopool.nim#L1034>`__
+    source line: `1038 <../src/mongopool.nim#L1038>`__
 
     Get a connection from the MongoDB pool.
     
@@ -269,7 +293,7 @@ insertMany
 
     .. code:: nim
 
-        proc insertMany*(db: var MongoConnection, collection: string, documents: seq[Bson], ordered: bool = true, writeConcern: Bson = nil): seq[Bson] =
+        proc insertMany*(db: var MongoConnection, collection: string, documents: seq[Bson], ordered: bool = true, writeConcern: Bson = null()): seq[Bson] =
 
     source line: `536 <../src/mongopool.nim#L536>`__
 
@@ -295,7 +319,7 @@ insertOne
 
     .. code:: nim
 
-        proc insertOne*(db: var MongoConnection, collection: string, document: Bson, ordered: bool = true, writeConcern: Bson = nil): Bson =
+        proc insertOne*(db: var MongoConnection, collection: string, document: Bson, ordered: bool = true, writeConcern: Bson = null()): Bson =
 
     source line: `577 <../src/mongopool.nim#L577>`__
 
@@ -334,7 +358,7 @@ releaseConnection
 
         proc releaseConnection*(mc: MongoConnection) {.gcsafe.} =
 
-    source line: `1074 <../src/mongopool.nim#L1074>`__
+    source line: `1078 <../src/mongopool.nim#L1078>`__
 
     Release a live database connection back to the MongoDB pool.
     
