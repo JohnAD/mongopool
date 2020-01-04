@@ -1,6 +1,6 @@
 # Package
 
-version      = "1.0.0"
+version      = "1.0.1"
 author       = "John Dupuy"
 description  = "MongoDB pooled client for threaded applications such as web servers"
 license      = "MIT"
