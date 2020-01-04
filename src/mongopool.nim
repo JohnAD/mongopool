@@ -243,7 +243,7 @@ randomize()
 export errors
 
 type
-  MongoConnection = object
+  MongoConnection* = object
     id: int
     asocket: Socket
     requestId: int32
@@ -876,7 +876,7 @@ proc addConnection() {.gcsafe.} =
       return
 
 
-proc connectMongoPool*(url: string, minConnections = 4, maxConnections = 20, loose=false) {.gcsafe.} =
+proc connectMongoPool*(url: string, minConnections = 4, maxConnections = 20, loose=true) {.gcsafe.} =
   ## This procedure connects to the MongoDB database using the supplied
   ## `url` string. That URL should be in the form of:
   ## 
