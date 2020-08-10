@@ -9,4 +9,4 @@ skipExt      = @["rst"]
 
 # Dependencies
 
-requires "nim >= 1.0.0", "bson >= 1.1.2", "scram >= 0.1.9"
+requires "nim >= 1.0.0", "bson >= 1.1.2", "scram >= 0.1.13"
